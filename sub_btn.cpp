@@ -8,7 +8,7 @@ static unsigned long offm = 0;
 
 void check_off()
 {
-	if (digitalRead(BTN_PIN) == HIGH) {
+	if (digitalRead(conf.pinb) == HIGH) {
 		if (onoff == 0)
 		{
 			onoff = 1;
@@ -20,7 +20,7 @@ void check_off()
 			offm = millis();
 		}
 	}
-	if (digitalRead(BTN_PIN) == LOW && onoff == 1)
+	if (digitalRead(conf.pinb) == LOW && onoff == 1)
 	{
 		if (offm != millis())
 		{
@@ -30,8 +30,8 @@ void check_off()
 		Serial.printf("OFF %d / %d\n", offp, 1000);
 		if (offp > 1000)
 		{
-			digitalWrite(PWR_PIN, HIGH);
-			pinMode(PWR_PIN, INPUT);
+			digitalWrite(conf.pinp, HIGH);
+			pinMode(conf.pinp, INPUT);
 			led_brgn(4);
 			led_show();
 		}
@@ -41,15 +41,15 @@ void check_off()
 void check_up()
 {
 	int showUp = 0;
-	while (digitalRead(BTN_PIN) == LOW && showUp < 20)
+	while (digitalRead(conf.pinb) == LOW && showUp < 20)
 	{
 		delay(50);
 		showUp++;
 	}
-	if (digitalRead(BTN_PIN) == LOW)
+	if (digitalRead(conf.pinb) == LOW)
 	{
 		int pixBut = -1;
-		while (pixBut < 31 && digitalRead(BTN_PIN) == LOW)
+		while (pixBut < 31 && digitalRead(conf.pinp) == LOW)
 		{
 			pixBut++;
 			if (pixBut == 4)

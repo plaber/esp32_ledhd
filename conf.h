@@ -31,6 +31,8 @@ struct config
 	char skwf;
 	char bt;
 	uint8_t pins[6];
+	uint8_t pinb;
+	uint8_t pinp;
 };
 
 struct status

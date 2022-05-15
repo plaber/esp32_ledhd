@@ -60,6 +60,6 @@ void wifi_conn()
 	else
 	{
 		Serial.println("No saved AP founded");
-		state.go = true;
+		if (state.maxbmp > 0) state.go = true;
 	}
 }

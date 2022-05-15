@@ -9,6 +9,7 @@
 #if FILESYSTEM == SPIFFS
 #include <SPIFFS.h>
 #endif
+#include <driver/adc.h>
 
 void setup();
 void loop();

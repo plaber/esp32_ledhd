@@ -3,6 +3,7 @@
 
 #include <WiFiUdp.h>
 #include <Preferences.h>
+#include <driver/adc.h>
 
 void udp_begin();
 int get_vcc(bool a);

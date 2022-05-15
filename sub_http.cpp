@@ -194,6 +194,8 @@ void handleRoot()
 	server.sendContent(
 		"\tload({ver:'" + get_answ("ver", "1") +
 		"', ip: '" + get_answ("ip","1") +
+		"', mac: '" + get_answ("mac","1") +
+		"', maca: '" + get_answ("maca","1") +
 		"', vcc: '" + get_answ("vcc", "1") +
 		"', heap: '" + get_answ("heap", "1") +
 		"', prog: '" + get_answ("prog", "1") +
@@ -324,7 +326,7 @@ void handleFiles()
 			ans += "<td>" + String(gf.w, DEC) + "</td>";
 			ans += "<td>" + String(gf.cdp + 1, DEC) + "</td>";
 			ans += "<td>" + String(mod) + "</td>";
-			ans += "<td><a target='_blank' href='/req?buf=1&f=" + urlencode(fname) + "'>dec<a>  ";
+			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
 			ans += "<a href='#' onclick='this.parentNode.nextElementSibling.firstChild.src = this.parentNode.nextElementSibling.firstChild.src'>rfr<a></td>";
 			num++;
 		}
@@ -386,14 +388,6 @@ input {width: 75px;}
 </head>
 <body>
 <a href='/'>back</a><br><br>
-pins (default is 22 23 18 19 4 5)<br>
-1 <input type='number' id='p0' max='34'>
-2 <input type='number' id='p1' max='34'><br>
-3 <input type='number' id='p2' max='34'>
-4 <input type='number' id='p3' max='34'><br>
-5 <input type='number' id='p4' max='34'>
-6 <input type='number' id='p5' max='34'><br>
-<input type=button value='set' onclick="r('pins',vl('p0')+' '+vl('p1')+' '+vl('p2')+' '+vl('p3')+' '+vl('p4')+' '+vl('p5'))"> <span id='pins'></span><br><br>
 leds <input type='number' id=ledv  min='3'><input type=button value="set" onclick="r('leds',vl('ledv'))"> <span id='leds'></span><br><br>
 <input type=button value='пои' onclick="r('mode',10)">
 <input type=button value='mask 1' onclick="r('mode',11)">
@@ -403,6 +397,20 @@ leds <input type='number' id=ledv  min='3'><input type=button value="set" onclic
 vcc <input type='number' id=vccs> <input type=button value="set" onclick="r('vcc',gid('vccs').value)">
 <span id=vcc></span><br><br>
 btt <span id=uptime>0000</span> <input type=button value="begin" onclick="r('uptime','1')">
+<input type=button value='pins' onclick="gid('tbp').style.display=''"><br>
+<table id='tbp' style='display:none;'><tr>
+<caption>pins (default is 22 23 18 19 4 5 12 14)</caption>
+<td>1</td><td><input type='number' id='p0' max='34'></td>
+<td>2</td><td><input type='number' id='p1' max='34'></td>
+<td>3</td><td><input type='number' id='p2' max='34'></td>
+</tr><tr>
+<td>4</td><td><input type='number' id='p3' max='34'></td>
+<td>5</td><td><input type='number' id='p4' max='34'></td>
+<td>6</td><td><input type='number' id='p5' max='34'></td>
+</tr><tr>
+<td></td><td><input type=button value='set' onclick="r('pins',vl('p0')+' '+vl('p1')+' '+vl('p2')+' '+vl('p3')+' '+vl('p4')+' '+vl('p5'))"></td>
+<td colspan=4><span id='pins'></span></td>
+</tr></table>
 <hr><br>
 <script>
 	function gid(id){return document.getElementById(id);}
@@ -554,65 +562,78 @@ void handleConfig()
 	);
 }
 
+void handleBuf()
+{
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, texthtml, "<html>\n"
+		"<head>\n<style>\n"
+		"td {width:5px;height:5px;}\n"
+		"body {font-family: monospace;}\n"
+		"</style>\n</head>\n"
+		"<body>\n"
+	);
+	if (server.args() == 1)
+	{
+		String fname = urldecode(server.arg(0));
+		if (fname.endsWith(exgif))
+		{
+			gifheader gf = gif_load(fname, true);
+			server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(gf.fsz) + "<br>\n");
+		}
+		if (fname.endsWith(exbmp))
+		{
+			struct bmpheader bm = bmp_load(fname, true);
+			server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(bm.size) + "<br>\n");
+		}
+	}
+	server.sendContent(
+	"<canvas id=canvas style='border:1px solid black'></canvas>\n"
+	"<script>\nvar w = " + String(bmpw, DEC) + ", h = " + String(bmph, DEC) + ";\n"
+		"var canvas = document.getElementById('canvas');\n"
+		"var ctx = canvas.getContext('2d');\n"
+		"canvas.width = w;\n"
+		"canvas.height = h;\n"
+	"</script>\n");
+	
+	server.sendContent("<script>\nvar img = [\n");
+	int px = 0;
+	char colbuf[1024];
+	int idxbuf = 0;
+	for (int i = 0; i < bmph; i++)
+	{
+		for (int j = 0; j < bmpw; j++)
+		{
+			sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + 2),*(p + px * 3 + 1),*(p + px * 3));
+			px++;
+			idxbuf += 9;
+			if(idxbuf >= 950)
+			{
+				server.sendContent(colbuf);
+				memset(colbuf, 0, 1024);
+				idxbuf = 0;
+			}
+		}
+		sprintf(colbuf + idxbuf, "\n");
+		idxbuf++;
+	}
+	if(idxbuf != 0)
+	{
+		server.sendContent(colbuf);
+		memset(colbuf, 0, 1024);
+		idxbuf = 0;
+	}
+	server.sendContent("];\n"
+	"for (var i = 0; i < h; i++)\n"
+	"\tfor (var j = 0; j < w; j++){\n"
+	"\t\tctx.fillStyle = '#' + img[i * w + j];\n"
+	"\t\tctx.fillRect(j, i, 1, 1);\n"
+	"\t}\n"
+	"</script>"
+	"</body></html>");
+}
+
 void handleReq()
 {
-	String san = server.argName(0);
-	String sav = server.arg(0);
-	if (san == "free")
-	{
-		int tBytes = FILESYSTEM.totalBytes(); int uBytes = FILESYSTEM.usedBytes();
-		server.send(200, textplain, String(tBytes - uBytes, DEC));
-		return;
-	}
-	if (san == "format")
-	{
-		FILESYSTEM.end();
-		bool f = FILESYSTEM.format();
-		bool b = FILESYSTEM.begin();
-		json_save();
-		if (conf.mode == 13) bmp_savecost();
-		server.send(200, texthtml, "format " + String(f ? "ok," : "fail,") + String(b ? " begin" : " not begin"));
-		return;
-	}
-	if (san == "wfaps")
-	{
-		int scn = WiFi.scanNetworks();
-		String ans = "";
-		if (scn > 0)
-			for (int scni = 0; scni < scn; ++scni)
-			{
-				ans += "<label><input type='radio' name='ssid' value='";
-				ans += WiFi.SSID(scni) + "'>" + WiFi.SSID(scni);
-				ans += "</label> [";
-				ans += String(WiFi.RSSI(scni), DEC) + "]<br>\n";
-			}
-			else
-			{
-				ans = F("no ap found");
-			}
-		server.send(200, textplain, ans);
-	}
-	if (san == "wpref")
-	{
-		if (sav == "1")
-		{
-			conf.wpref = "LedHD";
-			json_save();
-			server.send(200, textplain, "prefix reseted");
-			return;
-		}
-		else if (sav == "0")
-		{
-			server.send(200, textplain, "name=" + conf.wpref);
-			return;
-		}
-		else
-		{
-			conf.wpref = sav;
-			json_save();
-			server.send(200, textplain, "prefix saved");
-		}
-	}
 	if (server.args() == 3 && server.argName(0) == "ssid" && server.argName(1) == "p" && server.argName(2) == "i")
 	{
 		int idx = server.arg(2).toInt();
@@ -640,78 +661,15 @@ void handleReq()
 		}
 		return;
 	}
-	if (san == "buf")
+	String ans = get_answ(server.argName(0), server.arg(0));
+	server.send(200, textplain, ans);
+	
+	if (ans == F("restart"))
 	{
-		server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-		server.send(200, texthtml, "<html>\n"
-			"<head>\n<style>\n"
-			"td {width:5px;height:5px;}\n"
-			"body {font-family: monospace;}\n"
-			"</style>\n</head>\n"
-			"<body>\n"
-		);
-		if (server.args() == 2)
-		{
-			String fname = urldecode(server.arg(1));
-			if (fname.endsWith(exgif))
-			{
-				gifheader gf = gif_load(fname, true);
-				server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(gf.fsz) + "<br>\n");
-			}
-			if (fname.endsWith(exbmp))
-			{
-				struct bmpheader bm = bmp_load(fname, true);
-				server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(bm.size) + "<br>\n");
-			}
-		}
-		server.sendContent(
-		"<canvas id=canvas style='border:1px solid black'></canvas>\n"
-		"<script>\nvar w = " + String(bmpw, DEC) + ", h = " + String(bmph, DEC) + ";\n"
-			"var canvas = document.getElementById('canvas');\n"
-			"var ctx = canvas.getContext('2d');\n"
-			"canvas.width = w;\n"
-			"canvas.height = h;\n"
-		"</script>\n");
-		
-		server.sendContent("<script>\nvar img = [\n");
-		int px = 0;
-		char colbuf[1024];
-		int idxbuf = 0;
-		for (int i = 0; i < bmph; i++)
-		{
-			for (int j = 0; j < bmpw; j++)
-			{
-				sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + 2),*(p + px * 3 + 1),*(p + px * 3));
-				px++;
-				idxbuf += 9;
-				if(idxbuf >= 950)
-				{
-					server.sendContent(colbuf);
-					memset(colbuf, 0, 1024);
-					idxbuf = 0;
-				}
-			}
-			sprintf(colbuf + idxbuf, "\n");
-			idxbuf++;
-		}
-		if(idxbuf != 0)
-		{
-			server.sendContent(colbuf);
-			memset(colbuf, 0, 1024);
-			idxbuf = 0;
-		}
-		server.sendContent("];\n"
-		"for (var i = 0; i < h; i++)\n"
-		"\tfor (var j = 0; j < w; j++){\n"
-		"\t\tctx.fillStyle = '#' + img[i * w + j];\n"
-		"\t\tctx.fillRect(j, i, 1, 1);\n"
-		"\t}\n"
-		"</script>"
-		"</body></html>");
-		return;
+		led_clear();
+		delay(500);
+		ESP.restart();
 	}
-	server.send(200, textplain, get_answ(san, sav));
-
 }
 
 static const char content_prog[] PROGMEM = R"=====(
@@ -989,6 +947,7 @@ void http_begin()
 	server.on(F("/prog"), handleProg);
 	server.on("/pics", handlePics);
 	server.on("/config", handleConfig);
+	server.on("/buf", handleBuf);
 	server.on("/load", HTTP_POST, []() {
 		server.send(200, texthtml, " ");
 	}, handleFileUpload);

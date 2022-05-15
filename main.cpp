@@ -1,6 +1,5 @@
 #include "main.h"
 #include "conf.h"
-#include <driver/adc.h>
 #ifdef USEBLE
 #include "sub_ble.h"
 #endif
@@ -22,7 +21,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.11",
+	"v0.11a",
 	"LedHD",
 	0, //wait
 	4, //brgn
@@ -34,6 +33,8 @@ struct config conf = {
 	0, //skwf
 	0, //bluetooth
 	{22,25,26,27,0,0}, //pins
+	BTN_PIN,
+	PWR_PIN
 };
 
 struct status state = {
@@ -62,9 +63,9 @@ File file;
 
 void setup()
 {
-	pinMode(BTN_PIN, INPUT_PULLUP); //init mosfet button
-	pinMode(PWR_PIN, OUTPUT);
-	digitalWrite(PWR_PIN, LOW);
+	pinMode(conf.pinb, INPUT_PULLUP); //init mosfet button
+	pinMode(conf.pinp, OUTPUT);
+	digitalWrite(conf.pinp, LOW);
 
 	Serial.begin(115200);
 	while (!Serial); // wait for serial attach
@@ -76,8 +77,9 @@ void setup()
 	#endif
 	adc1_config_width(ADC_WIDTH_BIT_12);
 	adc1_config_channel_atten(VCC_CHN, ADC_ATTEN_DB_2_5);
-	
+
 	Serial.println();
+	Serial.printf("pinb %d pinp &d\n", conf.pinb, conf.pinp);
 	Serial.printf("Initializing... %d\n", CORE_DEBUG_LEVEL);
 
 	conf.psr = ESP.getPsramSize();
@@ -167,7 +169,7 @@ void loop()
 		file = root.openNextFile();
 		state.currbmp = 1;
 	}
-	if (state.go == true)
+	if (state.go == true && state.maxbmp > 0)
 	{
 		if (state.whdr == 3)
 		{
@@ -258,7 +260,7 @@ void loop()
 			}
 		}
 	}
-	while (state.go == false)
+	while (state.go == false || state.maxbmp == 0)
 	{
 		http_poll();
 		udp_poll();
