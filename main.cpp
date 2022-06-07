@@ -21,7 +21,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.11a",
+	"v0.11b",
 	"LedHD",
 	0, //wait
 	4, //brgn
