@@ -29,6 +29,7 @@ struct gifheader
 	uint8_t lzw;
 	uint8_t sz;
 	int fsz;
+	int fps;
 };
 
 struct gifheader gif_load(String path, bool ld);

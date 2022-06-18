@@ -49,7 +49,7 @@ void check_up()
 	if (digitalRead(conf.pinb) == LOW)
 	{
 		int pixBut = -1;
-		while (pixBut < 31 && digitalRead(conf.pinp) == LOW)
+		while (pixBut < 31 && digitalRead(conf.pinb) == LOW)
 		{
 			pixBut++;
 			if (pixBut == 4)

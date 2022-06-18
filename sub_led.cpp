@@ -8,8 +8,9 @@ RgbColor red(255, 0, 0);
 RgbColor yellow(255, 255, 0);
 RgbColor orange(255, 127, 0);
 RgbColor green(0, 255, 0);
-RgbColor wgreen(102, 255, 0);
 RgbColor blue(0, 0, 255);
+RgbColor wblue(0, 127, 255);
+RgbColor cyan(0, 255, 255);
 
 char cont[256] = {   
     0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,                              
@@ -163,11 +164,12 @@ void led_init()
 void led_blinkudp()
 {
 	strip0->ClearTo(red);
-	strip1->ClearTo(green);
-	strip2->ClearTo(blue);
-	strip3->ClearTo(yellow);
-	if (strip4 != NULL) strip4->ClearTo(red);
-	if (strip5 != NULL) strip5->ClearTo(green);
+	strip2->ClearTo(orange);
+	if (strip4 != NULL) strip4->ClearTo(yellow);
+	
+	strip1->ClearTo(blue);
+	strip3->ClearTo(wblue);
+	if (strip5 != NULL) strip5->ClearTo(cyan);
 
 	led_show();
 }

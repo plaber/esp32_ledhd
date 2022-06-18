@@ -9,6 +9,11 @@
 #include "sub_led.h"
 #include "sub_udp.h"
 
+extern File root;
+extern File file;
+
+static bool isgif = false;
+
 struct bmpheader bmp_load(String path, bool ld)
 {
 	struct bmpheader ans;
@@ -64,6 +69,7 @@ bool bmp_check(String path)
 
 void bmp_draw(String path, unsigned long tm)
 {
+	isgif = path.endsWith(exgif);
 	if (conf.mode == 10)
 	{
 		bmp_draw_poi(path, tm);
@@ -78,10 +84,9 @@ void bmp_draw_poi(String path, unsigned long tm)
 {
 	if (path.startsWith("/") == false) path = "/" + path;
 	if (bmp_check(path) && FILESYSTEM.exists(path)) {
-		unsigned long stm = millis(); Serial.println(stm);
+		unsigned long stm = millis(); //Serial.println(stm);
 		if (path.endsWith(exbmp)) bmp_load(path);
 		if (path.endsWith(exgif)) gif_load(path);
-		Serial.printf("draw %03d %03d %03d\n", bmpw, bmph, state.currbmp);
 		while ((millis() - stm) < tm || state.loop == false)
 		{
 			if (state.go == false || state.next || (state.loop == false && state.setbmp > 0 && state.currbmp != state.setbmp)) break;
@@ -96,10 +101,20 @@ void bmp_draw_poi(String path, unsigned long tm)
 				}
 				for (int i = 0; i < bmph; i++)
 				{
-					char bB = *(p + j * 3 + bmpw * i * 3);
-					char bG = *(p + j * 3 + bmpw * i * 3 + 1);
-					char bR = *(p + j * 3 + bmpw * i * 3 + 2);
-					RgbColor color(bR, bG, bB);
+					RgbColor color(0,0,0);
+					if (isgif)
+					{
+						int cidx = *(p + j + bmpw * i + 768) * 3;
+						color.B = *(p + cidx + 2);
+						color.G = *(p + cidx + 1);
+						color.R = *(p + cidx + 0);
+					}
+					else
+					{
+						color.B = *(p + (j + bmpw * i) * 3 + 0);
+						color.G = *(p + (j + bmpw * i) * 3 + 1);
+						color.R = *(p + (j + bmpw * i) * 3 + 2);
+					}
 					led_setpx(bmph - 1 - i, color);
 				}
 				led_show();
@@ -129,24 +144,59 @@ void bmp_draw_poi(String path, unsigned long tm)
 }
 
 static char cordslen, swidx, swidx2;
-static int frmw = 1, frmh = 1;
+int frmw = 1, frmh = 1;
 char *cords;
 
 static int px;
-static bool frmd = true;
+static bool framed = false;
+static bool gct = false;
 
 void bmp_setpx(int x, int y, int frm, int line)
 {
 	int ofs = 0;
-	if (frmd)
+	if (framed)
 	{
-		ofs = (bmpw * y + frm * frmw + x) * 3;
+		ofs = (bmpw * y + frm * bmpw * frmh + x);
 	}
 	else
 	{
-		ofs = (bmpw * y + frm * frmw * frmh + x) * 3;
+		ofs = (bmpw * y + frm * frmw + x);
 	}
-	RgbColor color(*(p + ofs + 2), *(p + ofs + 1), *(p + ofs));
+	RgbColor color(0,0,0);
+	if (isgif)
+	{
+		if (framed)
+		{
+			if (gct)
+			{
+				int cidx = *(p + ofs + 768) * 3;
+				color.B = *(p + cidx + 2);
+				color.G = *(p + cidx + 1);
+				color.R = *(p + cidx + 0);
+			}
+			else
+			{
+				int tidx = (768 + bmpw * frmh) * frm;
+				int cidx = *(p + ofs + 768 * (frm + 1)) * 3;
+				color.B = *(p + tidx + cidx + 2);
+				color.G = *(p + tidx + cidx + 1);
+				color.R = *(p + tidx + cidx + 0);
+			}
+		}
+		else
+		{
+			int cidx = *(p + ofs + 768) * 3;
+			color.B = *(p + cidx + 2);
+			color.G = *(p + cidx + 1);
+			color.R = *(p + cidx + 0);
+		}
+	}
+	else
+	{
+		color.B = *(p + ofs * 3 + 0);
+		color.G = *(p + ofs * 3 + 1);
+		color.R = *(p + ofs * 3 + 2);
+	}
 	led_setpx(px, color, line);
 	px++;
 }
@@ -180,20 +230,37 @@ void bmp_draw_mask(String path, unsigned long tm)
 	if (path.startsWith("/") == false) path = "/" + path;
 	if (bmp_check(path) && FILESYSTEM.exists(path))
 	{
-		Serial.println("begin draw " + path);
 		unsigned long stm = millis();
-		if (path.endsWith(exbmp)) bmp_load(path);
-		if (path.endsWith(exgif)) gif_load(path);
-		char x, a ,b;
-		int fps = bmpw / frmw;
-		int line;
-		frmd = true;
-		if (fps == 1)
+		int fps = 0;
+		framed = false;
+		if (path.endsWith(exbmp))
 		{
-			fps = bmph / frmh;
-			frmd = false;
+			bmp_load(path);
+			fps = bmpw / frmw;
 		}
-		Serial.println("fps " + String(fps,DEC));
+		if (path.endsWith(exgif))
+		{
+			gifheader g = gif_load(path, true);
+			if (g.cdp)
+			{
+				gct = true;
+			}	
+			else
+			{
+				gct = false;
+			}
+			fps = g.fps;
+			if (fps > 1)
+			{
+				framed = true;
+			}
+			else
+			{
+				fps = bmpw / frmw;
+			}
+		}
+		Serial.printf("fps %d framed %d %cct %d fps\n\n", fps, framed, isgif ? (gct ? 'G' : 'L') : 'N', fps);
+		int line;
 		while ((millis() - stm) < tm || state.loop == false)
 		{
 			if (state.go == false || state.next || (state.loop == false && state.setbmp > 0 && state.currbmp != state.setbmp)) break;
@@ -216,7 +283,7 @@ void bmp_draw_mask(String path, unsigned long tm)
 				{
 					if (swidx && i == swidx) {px = 0; line = 3;}
 					if (swidx2 && i == swidx2) {px = 0; line = 5;}
-					if ((conf.mode == 11 || conf.mode ==12) && i > swidx + 10 && (swidx2 ? (i < swidx2) : true))
+					if ((conf.mode == 11 || conf.mode ==12) && i >= swidx + 11 && i < swidx + 55)
 					{
 						bmp_drawline(36 + cords[i * 4 + 0] - 1, cords[i * 4 + 1], 36 + cords[i * 4 + 2] - 1, cords[i * 4 + 3], f, line);//led_show();bmpwait(50);
 					}
@@ -225,10 +292,10 @@ void bmp_draw_mask(String path, unsigned long tm)
 						bmp_drawline(frmw - cords[i * 4 + 0] - 1, cords[i * 4 + 1], frmw - cords[i * 4 + 2] - 1, cords[i * 4 + 3], f, line);//led_show();bmpwait(50);
 					}
 				}
-				//bmpwait(500);
 				led_show();
 				udp_poll();
 			}
+			udp_poll();
 			http_poll();
 		}
 		if (conf.bt)
@@ -248,11 +315,10 @@ void bmp_draw_mask(String path, unsigned long tm)
 	}
 }
 
-void bmp_draw_last()
+void bmp_draw_last(int fps)
 {
-	int fps = bmph / frmh - 1;
 	int line;
-	frmd = false;
+	framed = true;
 	px = 0;
 	line = 0;
 	for (int i = 0; i < cordslen; i++)
@@ -267,7 +333,7 @@ void bmp_draw_last()
 	{
 		if (swidx && i == swidx) {px = 0; line = 3;}
 		if (swidx2 && i == swidx2) {px = 0; line = 5;}
-		if ((conf.mode == 11 || conf.mode ==12) && i > swidx + 10 && (swidx2 ? (i < swidx2) : true))
+		if ((conf.mode == 11 || conf.mode ==12) && i >= swidx + 11 && i < swidx + 55)
 		{
 			bmp_drawline(36 + cords[i * 4 + 0] - 1, cords[i * 4 + 1], 36 + cords[i * 4 + 2] - 1, cords[i * 4 + 3], fps, line);//led_show();bmpwait(50);
 		}
@@ -285,9 +351,9 @@ void bmp_init()
 	if (conf.mode == 11 || (conf.mode == 13 && FILESYSTEM.exists("/costume.txt") == false))
 	{
 		cordslen = CLEN1;
-		Serial.println("Allocation try cords len " + String(cordslen, DEC) + " " + String(sizeof *cords, DEC));
+		Serial.printf("Allocate cords %d\n", cordslen);
 		cords = (char*) realloc(cords, cordslen * 4);
-		if(!cords) Serial.println("Allocation error cords len " + String(cordslen, DEC));
+		if(!cords) Serial.println("Allocation error cords");
 		swidx = SWIDX1;
 		swidx2 = SWIDX12;
 		frmw = 47;
@@ -297,9 +363,9 @@ void bmp_init()
 	if (conf.mode == 12)
 	{
 		cordslen = CLEN2;
-		Serial.println("Allocation try cords len " + String(cordslen, DEC) + " " + String(sizeof *cords, DEC));
+		Serial.printf("Allocate cords %d\n", cordslen);
 		cords = (char*) realloc(cords, cordslen * 4);
-		if(!cords) Serial.println("Allocation error cords len " + String(cordslen, DEC));
+		if(!cords) Serial.println("Allocation error cords");
 		swidx = SWIDX2;
 		swidx2 = SWIDX22;
 		frmw = 47;
@@ -398,9 +464,9 @@ void bmp_loadcost()
 			frmh = sv.toInt();
 		else if (i == 2) {
 			cordslen = sv.toInt();
-			Serial.println("Allocation try cords len " + String(cordslen, DEC) + " " + String(sizeof *cords, DEC));
+			Serial.printf("Allocate cords %d\n", cordslen);
 			cords = (char*) realloc(cords, cordslen * 4);
-			if(!cords) Serial.println("Allocation error cords len " + String(cordslen, DEC));
+			if(!cords) Serial.println("Allocation error cords");
 		} else if (i == 3) {
 			swidx = sv.toInt(); Serial.println("swidx " + String(swidx, DEC));
 		} else if (i == 4) {
@@ -453,5 +519,27 @@ void bmp_batlog()
 			batlog.close();
 			state.uptime = millis();
 		}
+	}
+}
+
+void bmp_next()
+{
+	if (state.maxbmp > 0)
+	{
+		String fname;
+		do
+		{
+			file = root.openNextFile();
+			if (!file)
+			{
+				root = FILESYSTEM.open("/");
+				file = root.openNextFile();
+				state.currbmp = 0;
+			}
+			fname = file.name();
+		}
+		while(!bmp_check(fname));
+		state.currbmp++;
+		state.currname = fname;
 	}
 }

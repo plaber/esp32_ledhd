@@ -264,6 +264,10 @@ static const char content_files2[] PROGMEM = R"=====(
 				}
 		})
 	}
+	function refr(t){
+		t.parentNode.parentNode.children[4].firstChild.src = t.parentNode.parentNode.children[4].firstChild.getAttribute('src1');
+		console.dir(t.parentNode.parentNode.children[4].firstChild);
+	}
 </script>
 <table border=1>
 <tr><td>#</td><td>del</td><td>name</td><td>size</td><td>pic</td><td>h</td><td>w</td><td>bits</td><td>tp</td><td>decode</td></tr>
@@ -319,7 +323,7 @@ void handleFiles()
 			"<td>" + file.size() + "</td>";
 		if (fname.endsWith(exgif))
 		{
-			ans += "<td><img src='" + fname + "'></td>";
+			ans += "<td><img src1='" + fname + "'></td>";
 			struct gifheader gf = gif_load(fname, false);
 			char mod[4] = {gf.mod[0], gf.mod[1], gf.mod[2], 0};
 			ans += "<td>" + String(gf.h, DEC) + "</td>";
@@ -327,19 +331,19 @@ void handleFiles()
 			ans += "<td>" + String(gf.cdp + 1, DEC) + "</td>";
 			ans += "<td>" + String(mod) + "</td>";
 			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
-			ans += "<a href='#' onclick='this.parentNode.nextElementSibling.firstChild.src = this.parentNode.nextElementSibling.firstChild.src'>rfr<a></td>";
+			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
 			num++;
 		}
 		if (fname.endsWith(exbmp))
 		{
-			ans += "<td><img src='" + fname + "'></td>";
+			ans += "<td><img src1='" + fname + "'></td>";
 			struct bmpheader bm = bmp_load(fname, false);
 			ans += "<td>" + String(bm.h, DEC) + "</td>";
 			ans += "<td>" + String(bm.w, DEC) + "</td>";
 			ans += "<td>" + String(bm.bits, DEC) + "</td>";
 			ans += "<td>" + String(bm.bminfo) + "</td>";
 			ans += "<td><a target='_blank' href='/req?buf=1&f=" + urlencode(fname) + "'>dec<a>  ";
-			ans += "<a href='#' onclick='this.parentNode.nextElementSibling.firstChild.src = this.parentNode.nextElementSibling.firstChild.src'>rfr<a></td>";
+			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
 			num++;
 		}
 		ans += "</tr>";
@@ -347,7 +351,13 @@ void handleFiles()
 		file = root.openNextFile();
 		numr++;
 	}
-	server.sendContent("</table>\n</body>\n</html>");
+	server.sendContent(
+		"</table>\n"
+		"<script>\n"
+		"var list =document.getElementsByTagName('img');\n"
+		"for (var i = 0; i < list.length; i++) list[i].src = list[i].getAttribute('src1');\n"
+		"</script>\n"
+		"</body>\n</html>");
 	server.sendContent("");
 }
 
@@ -586,7 +596,9 @@ void handleBuf()
 			server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(bm.size) + "<br>\n");
 		}
 	}
+	
 	server.sendContent(
+	state.currname + "<br>"
 	"<canvas id=canvas style='border:1px solid black'></canvas>\n"
 	"<script>\nvar w = " + String(bmpw, DEC) + ", h = " + String(bmph, DEC) + ";\n"
 		"var canvas = document.getElementById('canvas');\n"
@@ -594,16 +606,20 @@ void handleBuf()
 		"canvas.width = w;\n"
 		"canvas.height = h;\n"
 	"</script>\n");
-	
 	server.sendContent("<script>\nvar img = [\n");
 	int px = 0;
-	char colbuf[1024];
+	char colbuf[1024], pord[3] = {2,1,0};
+	if (state.currname.endsWith(exgif))
+	{
+		pord[0] = 0;
+		pord[2] = 2;
+	}
 	int idxbuf = 0;
 	for (int i = 0; i < bmph; i++)
 	{
 		for (int j = 0; j < bmpw; j++)
 		{
-			sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + 2),*(p + px * 3 + 1),*(p + px * 3));
+			sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + pord[0]),*(p + px * 3 + pord[1]),*(p + px * 3 + pord[2]));
 			px++;
 			idxbuf += 9;
 			if(idxbuf >= 950)
@@ -616,7 +632,7 @@ void handleBuf()
 		sprintf(colbuf + idxbuf, "\n");
 		idxbuf++;
 	}
-	if(idxbuf != 0)
+	if (idxbuf != 0)
 	{
 		server.sendContent(colbuf);
 		memset(colbuf, 0, 1024);
@@ -938,6 +954,10 @@ void handleFileDelete()
 	}
 }
 
+void ftp_calb(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
+	if (ftpOperation == FTP_FREE_SPACE_CHANGE) state.calcmax = true;
+}
+
 void http_begin()
 {
 	server.on("/", handleRoot);
@@ -974,6 +994,7 @@ void http_begin()
 	server.onNotFound(handleNotFound);
 	server.begin();
 	Serial.println("HTTP server started");
+	ftpSrv.setCallback(ftp_calb);
 	ftpSrv.begin("Welcome");
 	Serial.println("FTP server started");
 }

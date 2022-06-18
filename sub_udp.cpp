@@ -219,8 +219,8 @@ String get_answ(String san, String sav)
 				#endif
 					json_save();
 					return "poi";
-				case 11: conf.mode = 11; conf.leds = 850; json_save(); return "mask1";
-				case 12: conf.mode = 12; conf.leds = 850; json_save(); return "mask2";
+				case 11: conf.mode = 11; conf.leds = 930; json_save(); return "mask1";
+				case 12: conf.mode = 12; conf.leds = 980; json_save(); return "mask2";
 				case 13: conf.mode = 13; conf.leds = 850; json_save(); return "свой";
 				case 3 : state.whdr = 3; json_save(); return "files";
 				case 4 : state.whdr = 4; json_save(); return "prog";
@@ -243,12 +243,13 @@ String get_answ(String san, String sav)
 		if (savi > 0 && savi <= state.maxbmp)
 		{
 			state.setbmp = savi;
+			return "next " + sav;
 		}
 		else
 		{
 			state.next = true;
+			return "next ?";
 		}
-		return "next " + sav;
 	}
 	if (san == "modp")
 	{

@@ -21,7 +21,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.11b",
+	"v0.12",
 	"LedHD",
 	0, //wait
 	4, //brgn
@@ -43,6 +43,7 @@ struct status state = {
 	false, //next
 	0, //maxbmp
 	0, //currbmp
+	"no_bmp", //currname
 	0, //setbmp
 	3, //whdr
 	4000, //bpm
@@ -66,10 +67,10 @@ void setup()
 	pinMode(conf.pinb, INPUT_PULLUP); //init mosfet button
 	pinMode(conf.pinp, OUTPUT);
 	digitalWrite(conf.pinp, LOW);
-
+	
 	Serial.begin(115200);
 	while (!Serial); // wait for serial attach
-
+	
 	#ifdef ARDUINO_ESP32C3_DEV
 		conf.wpref = "LedC3";
 		conf.leds = 32;
@@ -77,27 +78,25 @@ void setup()
 	#endif
 	adc1_config_width(ADC_WIDTH_BIT_12);
 	adc1_config_channel_atten(VCC_CHN, ADC_ATTEN_DB_2_5);
-
+	
 	Serial.println();
-	Serial.printf("pinb %d pinp &d\n", conf.pinb, conf.pinp);
 	Serial.printf("Initializing... %d\n", CORE_DEBUG_LEVEL);
-
+	
 	conf.psr = ESP.getPsramSize();
-	Serial.printf("Total PSRAM: %d", conf.psr);
+	Serial.printf("Total PSRAM: %d\n", conf.psr);
 	if (conf.psr)
 	{
-		Serial.printf(" allocate ps %d bytes\n", 47 * 128 * 3 * 200);
-		p = (char*) ps_realloc(p, 47 * 128 * 3 * 200);
-		if(!p) Serial.println("Allocation error psram.");
+		Serial.printf("Allocate ps %d\n", 3800000);
+		p = (char*) ps_realloc(p, 3800000);
+		if(!p) Serial.println("Allocation error psram");
 	}
 	else
 	{
-		Serial.printf(" allocate ram %d bytes\n", 80 * 256 * 3);
-		p = (char*) realloc(p, 80 * 256 * 3);
-		if(!p) Serial.println("Allocation error ram.");
+		Serial.printf("Allocate ram %d\n", 64000);
+		p = (char*) realloc(p, 64000);
+		if(!p) Serial.println("Allocation error ram");
 	}
-	Serial.flush();
-	// this resets all the neopixels to an off state
+	
 	Serial.printf("fs begin %d\n", FILESYSTEM.begin());
 	json_load();
 	led_init();
@@ -109,11 +108,10 @@ void setup()
 	
 	bmp_init();
 	bmp_max();
-	delay(500);
+	root = FILESYSTEM.open("/");
+	bmp_next();
+	delay(100);
 	
-	Serial.println();
-	Serial.println("Running...");
-
 	if (conf.bt)
 	{
 		#ifdef USEBLE
@@ -163,12 +161,6 @@ void setup()
 
 void loop()
 {
-	if (!file)
-	{
-		root = FILESYSTEM.open("/");
-		file = root.openNextFile();
-		state.currbmp = 1;
-	}
 	if (state.go == true && state.maxbmp > 0)
 	{
 		if (state.whdr == 3)
@@ -176,41 +168,18 @@ void loop()
 			bmp_draw(file.name(), state.bpm);
 			if (state.loop)
 			{
-				file = root.openNextFile();
-				state.currbmp++;
+				bmp_next();
 			}
 			if (state.next)
 			{
-				file = root.openNextFile();
-				state.currbmp++;
+				bmp_next();
 				state.next = false;
 			}
 			if (state.setbmp)
 			{
 				while (state.currbmp != state.setbmp)
 				{
-					file = root.openNextFile();
-					String fname = file.name();
-					if (fname.endsWith(extxt)) continue;
-					if (!file)
-					{
-						root = FILESYSTEM.open("/");
-						file = root.openNextFile();
-						fname = file.name();
-						if (state.maxbmp > 0)
-						{
-							while(!bmp_check(fname))
-							{
-								file = root.openNextFile();
-								fname = file.name();
-							}
-						}
-						state.currbmp = 1;
-					}
-					else
-					{
-						state.currbmp++;
-					}
+					bmp_next();
 				}
 				state.setbmp = 0;
 			}

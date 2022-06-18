@@ -2,6 +2,8 @@
 #include "conf.h"
 #include "sub_bmp.h"
 
+extern int frmw, frmh;
+
 static int getBit(uint8_t *data, int pos)
 {
 	int posByte = pos / 8;
@@ -18,12 +20,12 @@ static uint16_t colorslen;
 static uint16_t dict[4096 * 2], dictlen;
 static int pofs;
 static uint8_t block[256];
-static uint16_t bt, bi, lzb, lz, last, imglen, imgw, imgh;
+static uint16_t bt, bi, lzb, lz, last;
 static uint32_t mil;
 
 static void freeall()
 {
-	colorslen = dictlen = bt = bi = lzb = lz = last = imglen = 0;
+	colorslen = dictlen = pofs = bt = bi = lzb = lz = last = 0;
 }
 
 static bool indict(int el)
@@ -41,22 +43,13 @@ static uint16_t first(uint16_t el)
 	{
 		if (!indict(el))
 		{
-			Serial.printf("%d ", el);
-			Serial.print(F("not in dict------------------\n"));
+			Serial.printf("--- %d not in dict %d %d---\n", el, colorslen, dictlen);
 			return 0;
 		}
 		uint16_t deep = el;
 		while((deep = *(dict + (deep - colorslen - 2) * 2)) > colorslen);
 		return deep;
 	}
-}
-
-static void img_push(uint16_t el)
-{
-	imglen++;
-	p[pofs++] = *(colors + el * 3 + 2);
-	p[pofs++] = *(colors + el * 3 + 1);
-	p[pofs++] = *(colors + el * 3 + 0);
 }
 
 static void dict_push(uint16_t el1, uint16_t el2)
@@ -77,7 +70,7 @@ static void add(uint16_t c)
 		uint16_t el = stack[--i];
 		if (el < colorslen)
 		{
-			img_push(el);
+			p[pofs++] = (char)el;
 		}
 		else
 		{
@@ -91,7 +84,7 @@ static void add(uint16_t c)
 
 static void decode(uint16_t idx, bool start)
 {
-	if (idx == colorslen || idx == colorslen + 1) return;
+	//if (idx == colorslen || idx == colorslen + 1) return;
 	if (start) //decode first pixel
 	{
 		add(idx);
@@ -114,7 +107,7 @@ static void decode(uint16_t idx, bool start)
 static void extract(uint8_t len)
 {
 	//Serial.printf("\nextr %03d ", len);
-	if (len == 255) Serial.write('.'); else Serial.printf("%d,", len);
+	if (len == 255) Serial.write('.'); else Serial.print(len);
 	static bool reinit = true;
 	for(int i = 0; i < len * 8; i++)
 	{
@@ -123,7 +116,7 @@ static void extract(uint8_t len)
 		bi++;
 		if (bi == lz)
 		{
-			if (bt == colorslen)
+			if (bt == colorslen) //clear code
 			{
 				dictlen = 0;
 				lz = lzb;
@@ -131,7 +124,15 @@ static void extract(uint8_t len)
 				bt = 0;
 				last = 0;
 				reinit = true;
+				//Serial.write('C');
 				continue;
+			}
+			if (bt == colorslen + 1) //stop code
+			{
+				bi = 0;
+				bt = 0;
+				//Serial.write('S');
+				break;
 			}
 			decode(bt, reinit);
 			bi = 0;
@@ -157,9 +158,10 @@ struct gifheader gif_load(String path, bool ld)
 		if (file.size() == 0) {Serial.println("zero size"); goto exitreadgif;}
 		file.seek(0, SeekSet);
 		file.read((uint8_t*)(&ans), 13);
-		bmpw = ans.w;
 		bmph = ans.h;
-		imgw = ans.w;
+		bmpw = ans.w;
+		ans.fsz = 0;
+		ans.fps = 0;
 		if (ans.flag & 0b10000000) //global color table
 		{
 			ans.cdp = ans.flag & 0b111;
@@ -174,65 +176,49 @@ struct gifheader gif_load(String path, bool ld)
 		{
 			int ctsize = pow2[ans.cdp + 1] * 3;
 			file.read((uint8_t*)(colors), ctsize);
+			memcpy(p + pofs, colors, 768);
+			pofs += 768;
 			colorslen = ctsize / 3;
-			ans.fb = file.read();
-			while (ans.fb != 0x2C) //non image block
-			{
-				file.read(); //scip code
-				uint8_t sz = 0;
-				while((sz = file.read()) != 0) file.seek(sz, SeekCur); //jump block
-				ans.fb = file.read();
-			}
-			file.read((uint8_t*)(&ans.row), 11);
-			ans.fsz = 0;
-			dictlen = 0;
-			pofs = 0;
-			lzb = ans.lzw + 1;
-			lz = ans.lzw + 1;
-			mil = millis();
-			if (ans.flagb  & 0b10000000) Serial.println("local color table");
-			do
-			{
-				file.read((uint8_t*)(block), ans.sz);
-				extract(ans.sz);
-				ans.fsz += ans.sz;
-			} while ((ans.sz = file.read()) != 0);
-			Serial.printf("\nimglen %d, real %d\n", imglen, ans.w * ans.h);
-		}
-		else
-		{
-			bmph = 0;
-			bmpw = ans.w;
-			imgh = ans.h;
-			imgw = ans.w;
-			ans.fsz = 0;
-			pofs = 0;
 			while (file.available())
 			{
 				ans.fb = file.read();
-				if (ans.fb == 0x3b) {Serial.write('\n');goto exitreadgif;}
-				/*
-				switch (ans.fb)
-				{
-					case 0x21: Serial.print("21 ext "); break;
-					case 0x2c: Serial.print("2C img data  "); break;
-					case 0x3b: Serial.println("3B end file"); goto exitreadgif;
-					default: Serial.printf("%02X unkn\n", ans.fb);
-				}
-				*/
+				if (ans.fb == 0x3B) {Serial.write('\n');goto exitreadgif;}
 				if (ans.fb == 0x21)
 				{
-					uint8_t cd = file.read(); //scip code
-					/*
-					switch (cd)
+					file.read(); //scip code
+					ans.sz = file.read();
+					do
 					{
-						case 0x01: Serial.println("text"); break;
-						case 0xf9: Serial.println("graph"); break;
-						case 0xfe: Serial.println("comment"); break;
-						case 0xff: Serial.println("prog"); break;
-						default: Serial.printf("%02X unkn ext\n", cd);
+						file.seek(ans.sz, SeekCur); //jump block
 					}
-					*/
+					while ((ans.sz = file.read()) != 0);
+				}
+				if (ans.fb == 0x2C)
+				{
+					file.read((uint8_t*)(&ans.row), 11);
+					lzb = ans.lzw + 1;
+					lz = ans.lzw + 1;
+					mil = millis();
+					do
+					{
+						file.read((uint8_t*)(block), ans.sz);
+						extract(ans.sz);
+						ans.fsz += ans.sz;
+					} while ((ans.sz = file.read()) != 0);
+					if (state.go && conf.mode != 10 && bmpw == frmw) bmp_draw_last(ans.fps);
+					ans.fps++;
+				}
+			}
+		}
+		else
+		{
+			while (file.available())
+			{
+				ans.fb = file.read();
+				if (ans.fb == 0x3B) {Serial.write('\n');goto exitreadgif;}
+				if (ans.fb == 0x21)
+				{
+					file.read(); //scip code
 					ans.sz = file.read();
 					do
 					{
@@ -245,9 +231,11 @@ struct gifheader gif_load(String path, bool ld)
 					file.read((uint8_t*)(&ans.row), 9);
 					if (ans.flagb & 0b10000000) //local color table
 					{
-						ans.cdp = ans.flagb & 0b111;
-						int ctsize = pow2[ans.cdp + 1] * 3;
+						int cdp = ans.flagb & 0b111;
+						int ctsize = pow2[cdp + 1] * 3;
 						file.read((uint8_t*)(colors), ctsize);
+						memcpy(p + pofs, colors, 768);
+						pofs += 768;
 						colorslen = ctsize / 3;
 						//Serial.printf("color tab %d %d ", ans.cdp, ctsize);
 					}
@@ -264,16 +252,14 @@ struct gifheader gif_load(String path, bool ld)
 						ans.fsz += ans.sz;
 					}
 					while ((ans.sz = file.read()) != 0);
-					bmph += imgh;
-					if (state.go && conf.mode != 10) bmp_draw_last();
+					if (state.go && conf.mode != 10 && bmpw == frmw) bmp_draw_last(ans.fps);
+					ans.fps++;
 				}
 			}
 			ans.fb = 0;
 		}
-		Serial.print(F("dictlen: "));
-		Serial.println(String(dictlen, DEC));
-		Serial.printf("time %d\n", millis() - stm);
 		exitreadgif:
+		Serial.printf("dictlen: %d pofs: %d\ntime %d\n", dictlen, pofs, millis() - stm);
 		file.close();
 		freeall();
 	}

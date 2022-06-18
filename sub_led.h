@@ -12,8 +12,9 @@ extern struct RgbColor red;
 extern struct RgbColor yellow;
 extern struct RgbColor orange;
 extern struct RgbColor green;
-extern struct RgbColor wgreen;
 extern struct RgbColor blue;
+extern struct RgbColor wblue;
+extern struct RgbColor cyan;
 
 void led_calccont(int confcont);
 void led_blink(int r, int g, int b);

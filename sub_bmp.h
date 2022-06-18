@@ -34,7 +34,7 @@ bool bmp_check(String path);
 void bmp_draw(String path, unsigned long tm);
 void bmp_draw_poi(String path, unsigned long tm);
 void bmp_draw_mask(String path, unsigned long tm);
-void bmp_draw_last();
+void bmp_draw_last(int fps);
 void bmp_init();
 void bmp_max();
 String bmp_conf();
@@ -43,11 +43,12 @@ void bmp_loadcost();
 void bmp_wait(int ms);
 void bmp_rainbow();
 void bmp_batlog();
+void bmp_next();
 
-#define CLEN1 17 + 11 + 12 + 10 + 12 + 10 + 8 + 11 + 10
+#define CLEN1 17 + 11 + 12 + 10 + 12 + 10 + 8 + 11 + 10 + 12
 #define SWIDX1 17
 #define SWIDX12 80
-#define FRMH1 169
+#define FRMH1 202
 #define M1 13
 #define K1 45
 
@@ -152,14 +153,25 @@ const char cords1[] PROGMEM = {
 	18, 133, 18, 167,
 	19, 166, 19, 134,
 	20, 135, 20, 143,
-	20, 155, 20, 166
-	
+	20, 155, 20, 166,
+	22, 171, 22, 188,//leg 3
+	21, 195, 21, 170,
+	20, 170, 20, 200,
+	19, 201, 19, 171,
+	18, 171, 18, 201,
+	17, 201, 17, 171,
+	16, 172, 16, 201,
+	15, 201, 15, 172,
+	14, 173, 14, 201,
+	13, 199, 13, 173,
+	12, 174, 12, 195,
+	11, 188, 11, 175
 };
 
-#define CLEN2 26 + 11 + 12 + 10 + 12 + 10 + 8 + 11 + 11
+#define CLEN2 26 + 11 + 12 + 10 + 12 + 10 + 8 + 11 + 11 + 13
 #define SWIDX2 26
 #define SWIDX22 89
-#define FRMH2 194
+#define FRMH2 226
 #define M2 2
 #define K2 66
 
@@ -274,7 +286,20 @@ const char cords2[] PROGMEM = {
 	19, 159, 19, 191,
 	20, 191, 20, 180,
 	20, 168, 20, 160,
-	21, 182, 21, 190
+	21, 182, 21, 190,
+	22, 197, 22, 210,//leg 3
+	21, 224, 21, 196,
+	20, 196, 20, 225,
+	19, 225, 19, 195,
+	18, 195, 18, 225,
+	17, 225, 17, 195,
+	16, 195, 16, 225,
+	15, 225, 15, 195,
+	14, 195, 14, 225,
+	13, 225, 13, 195,
+	12, 196, 12, 225,
+	11, 224, 11, 196,
+	10, 197, 10, 210
 };
 
 #endif

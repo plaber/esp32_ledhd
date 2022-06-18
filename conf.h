@@ -42,6 +42,7 @@ struct status
 	bool next;
 	int maxbmp;
 	int currbmp;
+	String currname;
 	int setbmp;
 	int whdr;
 	uint16_t bpm;
