@@ -149,7 +149,7 @@ char *cords;
 
 static int px;
 static bool framed = false;
-static bool gct = false;
+extern bool gct;
 
 void bmp_setpx(int x, int y, int frm, int line)
 {
@@ -241,14 +241,6 @@ void bmp_draw_mask(String path, unsigned long tm)
 		if (path.endsWith(exgif))
 		{
 			gifheader g = gif_load(path, true);
-			if (g.cdp)
-			{
-				gct = true;
-			}	
-			else
-			{
-				gct = false;
-			}
 			fps = g.fps;
 			if (fps > 1)
 			{
@@ -344,6 +336,7 @@ void bmp_draw_last(int fps)
 	}
 	led_show();
 	udp_poll();
+	delay(10);
 }
 
 void bmp_init()

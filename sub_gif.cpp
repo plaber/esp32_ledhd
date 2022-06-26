@@ -22,6 +22,7 @@ static int pofs;
 static uint8_t block[256];
 static uint16_t bt, bi, lzb, lz, last;
 static uint32_t mil;
+bool gct = false;
 
 static void freeall()
 {
@@ -165,10 +166,12 @@ struct gifheader gif_load(String path, bool ld)
 		if (ans.flag & 0b10000000) //global color table
 		{
 			ans.cdp = ans.flag & 0b111;
+			gct = true;
 		}
 		else
 		{
 			ans.cdp = 0;
+			gct = false;
 		}
 		if (ld == false) goto exitreadgif;
 		freeall();

@@ -163,13 +163,13 @@ void led_init()
 
 void led_blinkudp()
 {
-	strip0->ClearTo(red);
-	strip2->ClearTo(orange);
-	if (strip4 != NULL) strip4->ClearTo(yellow);
+	strip0->ClearTo(red); strip0->SetPixelColor(0, green);
+	strip2->ClearTo(red); for(int i = 0; i <= 2; i++) strip2->SetPixelColor(i, green);
+	if (strip4 != NULL){ strip4->ClearTo(red); for(int i = 0; i <= 4; i++) strip4->SetPixelColor(i, green);}
 	
-	strip1->ClearTo(blue);
-	strip3->ClearTo(wblue);
-	if (strip5 != NULL) strip5->ClearTo(cyan);
+	strip1->ClearTo(blue); for(int i = 0; i <= 1; i++) strip1->SetPixelColor(i, green);
+	strip3->ClearTo(blue); for(int i = 0; i <= 3; i++) strip3->SetPixelColor(i, green);
+	if (strip5 != NULL){ strip5->ClearTo(blue); for(int i = 0; i <= 5; i++) strip5->SetPixelColor(i, green);}
 
 	led_show();
 }
