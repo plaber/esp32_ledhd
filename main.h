@@ -10,6 +10,7 @@
 #include <SPIFFS.h>
 #endif
 #include <driver/adc.h>
+#include <Preferences.h>
 
 void setup();
 void loop();

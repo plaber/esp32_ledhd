@@ -336,7 +336,7 @@ void bmp_draw_last(int fps)
 	}
 	led_show();
 	udp_poll();
-	delay(10);
+	delay(25);
 }
 
 void bmp_init()

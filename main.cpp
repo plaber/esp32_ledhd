@@ -21,7 +21,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.12",
+	"v0.13",
 	"LedHD",
 	0, //wait
 	4, //brgn
@@ -64,6 +64,17 @@ File file;
 
 void setup()
 {
+	#ifndef ARDUINO_ESP32C3_DEV
+		Preferences preferences;
+		preferences.begin("conf", true);
+		conf.mode = preferences.getUChar("mode", 10);
+		preferences.end();
+		if (conf.mode == 10)
+		{
+			conf.pinb = 4;
+			conf.pinp = 5;
+		}
+	#endif
 	pinMode(conf.pinb, INPUT_PULLUP); //init mosfet button
 	pinMode(conf.pinp, OUTPUT);
 	digitalWrite(conf.pinp, LOW);

@@ -114,10 +114,11 @@ void led_brgn()
 
 NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod>* strip0 = NULL;
 NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod>* strip1 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod>* strip2 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod>* strip3 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod>* strip4 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod>* strip5 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod>* strip2 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod>* strip3 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod>* strip4 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod>* strip5 = NULL;
+
 
 void led_init()
 {
@@ -144,10 +145,12 @@ void led_init()
 
 	strip0 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> (conf.leds, conf.pins[0]);
 	strip1 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> (conf.leds, conf.pins[1]);
-	strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> (conf.leds, conf.pins[2]);
-	strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod> (conf.leds, conf.pins[3]);
-	if (conf.pins[4]) strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod> (conf.leds, conf.pins[4]);
-	if (conf.pins[5]) strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod> (conf.leds, conf.pins[5]);
+	strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod> (conf.leds, conf.pins[2]);
+	strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod> (conf.leds, conf.pins[3]);
+	if (conf.pins[4])
+	strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> (conf.leds, conf.pins[4]);
+	if (conf.pins[5])
+	strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod> (conf.leds, conf.pins[5]);
 
 	strip0->Begin();
 	strip1->Begin();

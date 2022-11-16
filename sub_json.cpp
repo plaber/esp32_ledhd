@@ -35,6 +35,11 @@ String str_decode(String in)
 
 void json_save()
 {
+	Preferences preferences;
+	preferences.begin("conf", true);
+	preferences.putUChar("mode", conf.mode);
+	preferences.end();
+
 	String jsonString = "";
 	jsonString += "wait=" + String(conf.wait, DEC) + "\n";
 	jsonString += "brgn=" + String(conf.brgn, DEC) + "\n";

@@ -428,13 +428,13 @@ btt <span id=uptime>0000</span> <input type=button value="begin" onclick="r('upt
 	function r(p,v){fetch('/req?'+p+'='+(v?v:'1')).then((response) => {return response.text();}).then((data) => {gid(p).innerHTML = data;});}
 	function load(v){for(var key in v){var el = gid(key); if (el.tagName.toLowerCase()=='span') el.innerHTML = v[key]; else el.value = v[key];}}
 	function llen(a,r,n,t){for(var b=Math.abs(n-a),e=Math.abs(t-r),f=a<n?1:-1,h=r<t?1:-1,l=b-e,o=1;a!=n||r!=t;){o++;var s=2*l;s>-e&&(l-=e,a+=f),s<b&&(l+=b,r+=h)}return o}
-	
-	function draw(){
+	function line(ctx,x1,y1,x2,y2,sc){var dX=Math.abs(x2-x1),dY=Math.abs(y2-y1),sX=x1<x2?1:-1,sY=y1<y2?1:-1,er=dX-dY;while(x1!=x2||y1!=y2)
+		{ctx.fillRect(x1*sc,y1*sc,sc,sc);var er2=er*2;if(er2>-dY){er=dY;x1+=sX;}if(er2<dX){er+=dX;y1+=sY;}}ctx.fillRect(x2 * sc, y2 * sc, sc, sc);}
+	function draw(sc){
 	var cn = gid('can');
 	var sw = gid('sw'), sw2 = gid('sw2');
 	var w = gid('w').value;
 	var h = gid('h').value;
-	var sc = 2;
 	cn.width = w * sc;
 	cn.height = h * sc;
 	var ctx = cn.getContext('2d');
@@ -449,19 +449,15 @@ btt <span id=uptime>0000</span> <input type=button value="begin" onclick="r('upt
 	{
 		if (i == sw.value){ cl1 = '#f80'; cl2 = '#0f8'; li = 1;}
 		if (sw2.value > 0 && i == sw2.value){ cl1 = '#06B'; cl2 = '#e22'; li = 2;}
-		var trg = rows[i].match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*$/);
+		var trg = rows[i].match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+(?!\S))/);
 		if (trg == null || trg.length != 5)
 		{
 			ers.push(i + 1);
 		} else {
-			ctx.strokeStyle = i % 2 == 0 ? cl1 : cl2;
+			ctx.fillStyle = i % 2 == 0 ? cl1 : cl2;
 			var x1 = parseInt(trg[1]), y1 = parseInt(trg[2]), x2 = parseInt(trg[3]), y2 = parseInt(trg[4]);
-			ctx.beginPath();
-			ctx.moveTo(x1 * sc + 1, y1 * sc);
-			ctx.lineTo(x2 * sc + 1, y2 * sc);
-			ctx.moveTo((w - x1) * sc - 1, y1 * sc);
-			ctx.lineTo((w - x2) * sc - 1, y2 * sc);
-			ctx.stroke();
+			line(ctx, x1, y1, x2, y2, sc);
+			line(ctx, (w - x1), y1, (w - x2), y2, sc);
 			lens[li] += llen(x1, y1, x2, y2);
 		}
 	}
@@ -478,7 +474,7 @@ btt <span id=uptime>0000</span> <input type=button value="begin" onclick="r('upt
 <tr><td colspan=4><div style='width:300px;height:400px;'><textarea name=f1 id=f1 rows=25>
 </textarea></div></td>
 <td colspan=2><canvas width=50 height=50 style='border: 1px solid black' id=can></canvas><br>
-<input type=button id=d value='проверить' onClick='draw()'><br><p id=ers></p></td></tr>
+<input type=button id=d value='проверить' onClick='draw(3)' ondblclick='draw(1)'><br><p id=ers></p></td></tr>
 <tr><td colspan=4><input type=submit value='сохранить'></td></tr>
 </table></form>
 )=====";
