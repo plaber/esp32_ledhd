@@ -10,10 +10,11 @@ int wifid = -1; //wifi founded
 
 void wifi_init()
 {
-	uint64_t chipid = ESP.getEfuseMac();
-	char buf[25] = {0};
-	sprintf(buf, "%s_%08X", conf.wpref, (uint32_t) chipid);
 	WiFi.mode(WIFI_AP_STA);
+	uint8_t mc[6];
+	WiFi.softAPmacAddress(mc);
+	char buf[25] = {0};
+	sprintf(buf, "%s_%02X%02X%02X", conf.wpref, mc[3], mc[4], mc[5]);
 	WiFi.softAP(buf, "12345678");
 }
 

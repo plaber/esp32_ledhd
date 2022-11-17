@@ -372,9 +372,10 @@ String get_answ(String san, String sav)
 	}
 	if (san == "ver")
 	{
-		uint64_t chipid = ESP.getEfuseMac();
+		uint8_t mc[6];
+		WiFi.softAPmacAddress(mc);
 		char buf[45] = {0};
-		sprintf(buf, "%s %s_%08X", conf.ver, conf.wpref, (uint32_t) chipid);
+		sprintf(buf, "%s %s_%02X%02X%02X", conf.ver, conf.wpref, mc[3], mc[4], mc[5]);
 		return String(buf);
 	}
 	if (san == "wait" || san == "spd")
