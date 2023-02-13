@@ -21,8 +21,8 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.13a",
-	"LedHD",
+	"v0.14",
+	"LedHDxx",
 	0, //wait
 	4, //brgn
 	10, //mode
@@ -34,7 +34,8 @@ struct config conf = {
 	0, //bluetooth
 	{22,25,26,27,0,0}, //pins
 	BTN_PIN,
-	PWR_PIN
+	PWR_PIN,
+	ADC1_CHANNEL_0 //36
 };
 
 struct status state = {
@@ -69,11 +70,13 @@ void setup()
 		preferences.begin("conf", true);
 		conf.mode = preferences.getUChar("mode", 10);
 		preferences.end();
-		if (conf.mode == 10)
+		if (conf.mode == 10 || conf.mode == 14)
 		{
 			conf.pinb = 4;
 			conf.pinp = 5;
 		}
+		if (conf.mode == 10) {conf.wpref = "LedHD72"; conf.vccch = ADC1_CHANNEL_5;} //33
+		if (conf.mode == 14) {conf.wpref = "LedHD80"; conf.vccch = ADC1_CHANNEL_0;} //36
 	#endif
 	pinMode(conf.pinb, INPUT_PULLUP); //init mosfet button
 	pinMode(conf.pinp, OUTPUT);
@@ -83,12 +86,13 @@ void setup()
 	while (!Serial); // wait for serial attach
 	
 	#ifdef ARDUINO_ESP32C3_DEV
-		conf.wpref = "LedC3";
+		conf.wpref = "LedC332";
 		conf.leds = 32;
 		conf.vcc = 4.1;
+		conf.vccch = ADC1_CHANNEL_1; //1
 	#endif
 	adc1_config_width(ADC_WIDTH_BIT_12);
-	adc1_config_channel_atten(VCC_CHN, ADC_ATTEN_DB_2_5);
+	adc1_config_channel_atten(conf.vccch, ADC_ATTEN_DB_2_5);
 	
 	Serial.println();
 	Serial.printf("Initializing... %d\n", CORE_DEBUG_LEVEL);
@@ -122,7 +126,7 @@ void setup()
 	root = FILESYSTEM.open("/");
 	bmp_next();
 	delay(100);
-	
+
 	if (conf.bt)
 	{
 		#ifdef USEBLE

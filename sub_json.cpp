@@ -36,7 +36,7 @@ String str_decode(String in)
 void json_save()
 {
 	Preferences preferences;
-	preferences.begin("conf", true);
+	preferences.begin("conf", false);
 	preferences.putUChar("mode", conf.mode);
 	preferences.end();
 
@@ -60,7 +60,7 @@ void json_save()
 		jsonString += "ssd2=" + ssid[2] + "\n";
 		jsonString += "pss2=" + str_encode(pass[2]) + "\n";
 	}
-	if (conf.wpref != "LedHD")
+	if (conf.wpref != "LedHDxx" && conf.wpref != "LedHD72" && conf.wpref != "LedHD80")
 	{
 		jsonString += "wprf=" + conf.wpref + "\n";
 	}

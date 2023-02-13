@@ -70,7 +70,7 @@ bool bmp_check(String path)
 void bmp_draw(String path, unsigned long tm)
 {
 	isgif = path.endsWith(exgif);
-	if (conf.mode == 10)
+	if (conf.mode == 10 || conf.mode == 14)
 	{
 		bmp_draw_poi(path, tm);
 	}
@@ -118,18 +118,18 @@ void bmp_draw_poi(String path, unsigned long tm)
 					led_setpx(bmph - 1 - i, color);
 				}
 				led_show();
-				udp_poll();
 				check_off();
 				if (conf.wait > 0) delayMicroseconds(conf.wait * 100);
 			}
+			udp_poll();
 			http_poll();
 		}
+		#ifdef USEBLE
 		if (conf.bt)
 		{
-			#ifdef USEBLE
 			ble_poll();
-			#endif
 		}
+		#endif
 		led_clear();
 		led_show();
 	} 

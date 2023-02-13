@@ -1,18 +1,16 @@
 #ifndef CONF_H
 #define CONF_H
 
+#include <driver/adc.h>
+
 #define FILESYSTEM FFat
 //#define FILESYSTEM SPIFFS
 //#define USEBLE
 
 #ifndef ARDUINO_ESP32C3_DEV
-#define VCC_PIN 36
-#define VCC_CHN ADC1_CHANNEL_0
 #define BTN_PIN 12
 #define PWR_PIN 14
 #else
-#define VCC_PIN 1
-#define VCC_CHN ADC1_CHANNEL_1
 #define BTN_PIN 18
 #define PWR_PIN 19
 #endif
@@ -33,6 +31,7 @@ struct config
 	uint8_t pins[6];
 	uint8_t pinb;
 	uint8_t pinp;
+	adc1_channel_t vccch;
 };
 
 struct status

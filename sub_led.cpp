@@ -112,17 +112,34 @@ void led_brgn()
 
 #ifndef ARDUINO_ESP32C3_DEV
 
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod>* strip0 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod>* strip1 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod>* strip2 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod>* strip3 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod>* strip4 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod>* strip5 = NULL;
-
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip0 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip1 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip2 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip3 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip4 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method>* strip5 = NULL;
 
 void led_init()
 {
-	if (conf.mode != 10)
+	if (conf.mode == 10)
+	{
+		conf.pins[0] = 22;
+		conf.pins[1] = 25;
+		conf.pins[2] = 26;
+		conf.pins[3] = 27;
+		conf.pins[4] = 14;
+		conf.pins[5] = 23;
+	}
+	else if (conf.mode == 14)
+	{
+		conf.pins[0] = 22;
+		conf.pins[1] = 25;
+		conf.pins[2] = 26;
+		conf.pins[3] = 27;
+		conf.pins[4] = 0;
+		conf.pins[5] = 0;
+	}
+	else
 	{
 		Preferences preferences;
 		preferences.begin("pins", true);
@@ -143,14 +160,12 @@ void led_init()
 	if (strip4 != NULL) delete strip4;
 	if (strip5 != NULL) delete strip5;
 
-	strip0 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> (conf.leds, conf.pins[0]);
-	strip1 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> (conf.leds, conf.pins[1]);
-	strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s0Ws2812xMethod> (conf.leds, conf.pins[2]);
-	strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1Ws2812xMethod> (conf.leds, conf.pins[3]);
-	if (conf.pins[4])
-	strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> (conf.leds, conf.pins[4]);
-	if (conf.pins[5])
-	strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod> (conf.leds, conf.pins[5]);
+					  strip0 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[0]);
+					  strip1 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[1]);
+					  strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[2]);
+					  strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[3]);
+	if (conf.pins[4]) strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[4]);
+	if (conf.pins[5]) strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp32I2s1X8Sk6812Method> (conf.leds, conf.pins[5]);
 
 	strip0->Begin();
 	strip1->Begin();
@@ -180,11 +195,28 @@ void led_blinkudp()
 void led_setpx(int i, RgbColor &color)
 {
 	RgbColor colorm(cont[color.R], cont[color.G], cont[color.B]);
-	int j = 80 - i - 1;
-	if (j < 20) {strip0->SetPixelColor(j -  0, colorm); return;}
-	if (j < 40) {strip1->SetPixelColor(j - 20, colorm); return;}
-	if (j < 60) {strip2->SetPixelColor(j - 40, colorm); return;}
-	if (j < 80) {strip3->SetPixelColor(j - 60, colorm); return;}
+	if (conf.mode == 10)
+	{
+		int j = 72 - i - 1;
+		if (j < 12) {strip0->SetPixelColor(j -  0, colorm); return;}
+		if (j < 24) {strip1->SetPixelColor(j - 12, colorm); return;}
+		if (j < 36) {strip2->SetPixelColor(j - 24, colorm); return;}
+		if (j < 48) {strip3->SetPixelColor(j - 36, colorm); return;}
+		if (j < 60) {strip4->SetPixelColor(j - 48, colorm); return;}
+		if (j < 72) {strip5->SetPixelColor(j - 60, colorm); return;}
+	}
+	else if (conf.mode == 14)
+	{
+		int j = 80 - i - 1;
+		if (j < 20) {strip0->SetPixelColor(j -  0, colorm); return;}
+		if (j < 40) {strip1->SetPixelColor(j - 20, colorm); return;}
+		if (j < 60) {strip2->SetPixelColor(j - 40, colorm); return;}
+		if (j < 80) {strip3->SetPixelColor(j - 60, colorm); return;}
+	}
+	else
+	{
+		strip0->SetPixelColor(i, colorm);
+	}
 }
 
 void led_setpx(int i, RgbColor &color, int str)
@@ -203,7 +235,7 @@ void led_setpx(int i, RgbColor &color, int str)
 
 void led_setpxall(int i, RgbColor &color)
 {
-	if (conf.mode != 10)
+	if (conf.mode != 10 && conf.mode != 14)
 	{
 		RgbColor colorm(cont[color.R], cont[color.G], cont[color.B]);
 		strip0->SetPixelColor(i, colorm);

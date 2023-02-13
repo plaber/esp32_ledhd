@@ -399,7 +399,8 @@ input {width: 75px;}
 <body>
 <a href='/'>back</a><br><br>
 leds <input type='number' id=ledv  min='3'><input type=button value="set" onclick="r('leds',vl('ledv'))"> <span id='leds'></span><br><br>
-<input type=button value='пои' onclick="r('mode',10)">
+<input type=button value='пои 6x12' onclick="r('mode',10)">
+<input type=button value='пои 4x20' onclick="r('mode',14)">
 <input type=button value='mask 1' onclick="r('mode',11)">
 <input type=button value='mask 2' onclick="r('mode',12)">
 <input type=button value='свой' onclick="r('mode',13)">

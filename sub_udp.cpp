@@ -16,7 +16,7 @@ void udp_begin()
 int get_vcc(bool a)
 {
 	int ad = 0;
-	for (int i = 0; i < 10; i++) ad += adc1_get_raw(VCC_CHN);
+	for (int i = 0; i < 10; i++) ad += adc1_get_raw(conf.vccch);
 	return (a ? 1 : conf.vcc) * ad / 10;
 }
 
@@ -198,10 +198,11 @@ String get_answ(String san, String sav)
 		{
 			switch (conf.mode)
 			{
-				case 10: return "poi";
+				case 10: return "poi 6";
 				case 11: return "mask1";
 				case 12: return "mask2";
 				case 13: return "свой";
+				case 14: return "poi 4";
 				default: return "err";
 			}
 		}
@@ -213,15 +214,16 @@ String get_answ(String san, String sav)
 				case 10: 
 					conf.mode = 10;
 				#ifndef ARDUINO_ESP32C3_DEV
-					conf.leds = 20;
+					conf.leds = 12;
 				#else
 					conf.leds = 32;
 				#endif
 					json_save();
-					return "poi";
+					return "poi 6";
 				case 11: conf.mode = 11; conf.leds = 930; json_save(); return "mask1";
 				case 12: conf.mode = 12; conf.leds = 980; json_save(); return "mask2";
 				case 13: conf.mode = 13; conf.leds = 850; json_save(); return "свой";
+				case 14: conf.mode = 14; conf.leds = 20;  json_save(); return "poi 4";
 				case 3 : state.whdr = 3; json_save(); return "files";
 				case 4 : state.whdr = 4; json_save(); return "prog";
 				default: return "err mode " + sav;
@@ -421,7 +423,7 @@ String get_answ(String san, String sav)
 		}
 		else if (sav == "1")
 		{
-			conf.wpref = "LedHD";
+			conf.wpref = "LedHDxx";
 			json_save();
 			return "prefix reseted";
 			
