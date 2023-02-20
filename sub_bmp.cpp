@@ -125,10 +125,7 @@ void bmp_draw_poi(String path, unsigned long tm)
 			http_poll();
 		}
 		#ifdef USEBLE
-		if (conf.bt)
-		{
-			ble_poll();
-		}
+		if (conf.bt) ble_poll();
 		#endif
 		led_clear();
 		led_show();
@@ -290,12 +287,9 @@ void bmp_draw_mask(String path, unsigned long tm)
 			udp_poll();
 			http_poll();
 		}
-		if (conf.bt)
-		{
-			#ifdef USEBLE
-			ble_poll();
-			#endif
-		}
+		#ifdef USEBLE
+		if (conf.bt) ble_poll();
+		#endif
 	}
 	else
 	{

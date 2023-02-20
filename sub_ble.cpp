@@ -59,21 +59,21 @@ bool setupCharacteristics(BLERemoteService* pRemoteService, NotifyCallback pNoti
 	for (itrbh = pmapbh->begin(); itrbh != pmapbh->end(); itrbh++)
 	{
 		BLEUUID x = itrbh->second->getUUID();
-		Serial.print(F("Characteristic UUID: "));
+		Serial.print("Characteristic UUID: ");
 		Serial.println(x.toString().c_str());
 		if (ReportCharUUID.equals(itrbh->second->getUUID()))
 		{
-			Serial.println(F("Found a report characteristic"));
+			Serial.println("Found a report characteristic");
 			if (itrbh->second->canNotify())
 			{
-				Serial.println(F("Can notify"));
+				Serial.println("Can notify");
 				itrbh->second->registerForNotify(pNotifyCallback);
 				sprintf(bfr, "Callback registered for: Handle: 0x%08X, %d", itrbh->first, itrbh->first);
 				Serial.println(bfr);
 			}
 			else
 			{
-				Serial.println(F("No notification"));
+				Serial.println("No notification");
 			}
 		}
 		else
@@ -86,22 +86,22 @@ bool setupCharacteristics(BLERemoteService* pRemoteService, NotifyCallback pNoti
 
 bool connectToServer()
 {
-	Serial.print(F("Forming a connection to "));
+	Serial.print("Forming a connection to ");
 	Serial.println(myDevice->getAddress().toString().c_str());
 	BLEClient* pClient = BLEDevice::createClient();
-	Serial.println(F(" - Created client"));
+	Serial.println(" - Created client");
 	pClient->setClientCallbacks(new MyClientCallback());
 	pClient->connect(myDevice);
-	Serial.println(F(" - Connected to server"));
+	Serial.println(" - Connected to server");
 	BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
 	if (pRemoteService == nullptr)
 	{
-		Serial.print(F("Failed to find HID service UUID: "));
+		Serial.print("Failed to find HID service UUID: ");
 		Serial.println(serviceUUID.toString().c_str());
 		pClient->disconnect();
 		return false;
 	}
-	Serial.println(F(" - Found HID service"));
+	Serial.println(" - Found HID service");
 	setupCharacteristics(pRemoteService, notifyCallback);
 	connected = true;
 }
@@ -119,16 +119,16 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
 {
 	void onResult(BLEAdvertisedDevice advertisedDevice)
 	{
-		Serial.print(F("BLE Advertised Device found: "));
+		Serial.print("BLE Advertised Device found: ");
 		Serial.println(advertisedDevice.toString().c_str());
 		if (advertisedDevice.haveName())
 		{
 			if (0 == strcmp(ServerName, advertisedDevice.getName().c_str()))
 			{
-				Serial.println(F("Found VRBOX Server"));
+				Serial.println("Found VRBOX Server");
 				if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
 				{
-					Serial.println(F("Server has HID service"));
+					Serial.println("Server has HID service");
 					BLEDevice::getScan()->stop();
 					myDevice = new BLEAdvertisedDevice(advertisedDevice);
 					doConnect = true;
@@ -136,13 +136,13 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
 				}
 				else
 				{
-					Serial.println(F("Server does not have an HID service, not our server"));
+					Serial.println("Server does not have an HID service, not our server");
 				}
 			}
 		}
 		else
 		{
-			Serial.println(F("Server name does not match, not our server"));
+			Serial.println("Server name does not match, not our server");
 		}
 		vTaskResume(HandleCh);
 	}
@@ -174,7 +174,7 @@ void ble_init()
 	if (!connected)
 	{
 		doScan = true;
-		Serial.println(F("Offline, start a scan"));
+		Serial.println("Offline, start a scan");
 	}
 }
 
@@ -184,11 +184,11 @@ void ble_poll()
 	{
 		if (connectToServer())
 		{
-			Serial.println(F("We are now connected to the BLE Server."));
+			Serial.println("We are now connected to the BLE Server.");
 		} 
 		else
 		{
-			Serial.println(F("We have failed to connect to the server; there is nothin more we will do."));
+			Serial.println("We have failed to connect to the server; there is nothin more we will do.");
 		}
 		doConnect = false;
 	}
@@ -198,7 +198,7 @@ void ble_poll()
 	}
 	else if (doScan)
 	{
-		Serial.println(F("Start scanning after disconnect"));
+		Serial.println("Start scanning after disconnect");
 		BLEDevice::getScan()->start(1);
 	}
 }

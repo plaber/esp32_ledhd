@@ -52,11 +52,11 @@ void wifi_conn()
 			led_blink(255, 0, 0);
 			trycon++;
 		}
-		IPAddress broadCast = WiFi.localIP();
-		led_drawip(broadCast[3]);
+		IPAddress myip = WiFi.localIP();
+		led_drawip(myip[3]);
 		udp_sendip();
 		Serial.println();
-		Serial.println("IP address: " + broadCast.toString());
+		Serial.println("IP address: " + myip.toString());
 	}
 	else
 	{

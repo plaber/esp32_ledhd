@@ -1,0 +1,192 @@
+#include "sub_enow.h"
+#include "conf.h"
+#include "sub_udp.h"
+#include "sub_led.h"
+
+#define WIFI_CHANNEL 3
+
+static uint16_t macmask;
+
+void enow_begin()
+{
+	WiFi.persistent(false);
+	WiFi.mode(WIFI_AP);
+	WiFi.softAP("ESPNOW", nullptr, WIFI_CHANNEL);
+	WiFi.softAPdisconnect(false);
+
+	bool conENow = WifiEspNow.begin();//Broadcast
+	if (!conENow)
+	{
+		Serial.println("Enow failed");
+	}
+	else
+	{
+		WifiEspNow.onReceive(enow_receive, nullptr);//Broadcast
+		Serial.println("Enow begin");
+	}
+	macmask = 1;
+	for (int i = 0; i <= conf.macslen; i++) macmask |= 1 << i;
+	int me = enow_getorder();
+	conf.macson |= 1 << (me - 1);
+}
+
+void enow_end()
+{
+	WifiEspNow.onReceive(nullptr, nullptr);//Broadcast
+}
+
+void enow_poll()
+{
+	//WifiEspNow.loop();//Broadcast
+}
+
+void enow_receive(const uint8_t mac[6], const uint8_t * buf, size_t count, void * cbarg)
+{
+	bool nonb = true;
+	for (int i = 0; i < conf.macslen; i++)
+	{
+		if (mac[0] == conf.macs[i][0] && mac[1] == conf.macs[i][1] && mac[2] == conf.macs[i][2] &&
+			mac[3] == conf.macs[i][3] && mac[4] == conf.macs[i][4] && mac[5] == conf.macs[i][5])
+		{
+			nonb = false;
+			break;
+		}
+	}
+	if (nonb) return;
+	Serial.print("Message from ");
+	for (int m = 0; m < 6; m++) Serial.printf("%02X", mac[m]);
+	Serial.println();
+	char buft[count + 1];
+	for (int i = 0; i < count; ++i) buft[i] = buf[i]; //Serial.print(static_cast<char>(buf[i]));
+	buft[count] = 0;
+	String q = String(buft);
+	Serial.println(String(millis()) + ": " + q);
+	if (q.startsWith("enow"))
+	{
+		int dei = q.indexOf("=");
+		String sn = q.substring(5, dei);
+		String sv = q.substring(dei + 1);
+		Serial.println("sn " + sn + " sv " + sv);
+		String ans = get_answ(sn, sv);
+		char bans[ans.length() + 1];
+		ans.toCharArray(bans, ans.length() + 1);
+		bans[ans.length()] = 0;
+		Serial.print("bans is: ");
+		Serial.println(String(bans));
+		WifiEspNow.send(mac, reinterpret_cast <const uint8_t * > (bans), sizeof bans);
+		if (ans == "restart")
+		{
+			led_clear();
+			delay(500);
+			ESP.restart();
+		}
+	}
+	if (q.startsWith("go"))
+	{
+			char ans[8];
+			sprintf(ans, "iamon%02d", enow_getorder());
+			WifiEspNow.send(mac, reinterpret_cast <const uint8_t * > (ans), 7);
+	}
+	if (q.startsWith("iamon"))
+	{
+		int cl = q.substring(5).toInt();
+		conf.macson |= 1 << (cl - 1);
+		Serial.print(conf.macson, BIN); Serial.print(" "); Serial.println(macmask, BIN);
+		if (conf.macson == macmask)
+		{
+			//WifiEspNowBroadcast.send(reinterpret_cast < const uint8_t * > ("enow_go=1"), 9);
+			//WifiEspNowBroadcast.send(reinterpret_cast < const uint8_t * > ("enow_go=1"), 9);
+			for (int i = 0; i < conf.macslen; i++) {WifiEspNow.send(conf.macs[i], reinterpret_cast <const uint8_t * > ("enow_go=1"), 9); delay(5);}
+			for (int i = 0; i < conf.macslen; i++) {WifiEspNow.send(conf.macs[i], reinterpret_cast <const uint8_t * > ("enow_go=1"), 9); delay(5);}
+			state.go = true;
+		}
+	}
+}
+
+void enow_send(String txt)
+{
+	char msg[60];
+	int len = txt.length();
+	txt.toCharArray(msg, 60);
+	snprintf(msg, sizeof(msg), "%s", txt);
+	//WifiEspNowBroadcast.send(reinterpret_cast < const uint8_t * > (msg), len);
+	for (int i = 0; i < conf.macslen; i++) {WifiEspNow.send(conf.macs[i], reinterpret_cast <const uint8_t * > (msg), len); delay(5);}
+	Serial.printf("Sending message (%d): %s\n", len, msg);
+	/*
+	Serial.print("Recipients:");
+	const int MAX_PEERS = 20;
+	WifiEspNowPeerInfo peers[MAX_PEERS];
+	int nPeers = std::min(WifiEspNow.listPeers(peers, MAX_PEERS), MAX_PEERS);
+	for (int i = 0; i < nPeers; ++i)
+	{
+		for (int m = 0; m < 6; m++) Serial.printf("%02X", peers[i].mac[m]);
+		Serial.write(' ');
+	}
+	Serial.println();
+	*/
+}
+
+int enow_getorder()
+{
+	uint8_t mc[6];
+	WiFi.softAPmacAddress(mc);
+	int px = 1;
+	for (int i = 0; i < conf.macslen; i++)
+	{
+		if (strncmp((char *)conf.macs[i], (char *)mc, 6) > 0) px++;
+	}
+	return px;
+}
+
+void enow_wakeup2()
+{
+	if (conf.macslen > 0)
+	{
+		if (!WifiEspNow.hasPeer(conf.macs[0]))
+		{
+			Serial.print("adding peer ");
+			WifiEspNow.addPeer(conf.macs[0], 3);
+		}
+		uint8_t mc[6];
+		WiFi.softAPmacAddress(mc);
+		Serial.print("compare "); Serial.println(strncmp((char *)mc, (char *)conf.macs[0], 6));
+		if (strncmp((char *)mc, (char *)conf.macs[0], 6) > 0)
+		{
+			WifiEspNow.send(conf.macs[0], reinterpret_cast<const uint8_t*>("go"), 2);
+		}
+	}
+	else
+	{
+		state.go = true;
+	}
+}
+
+void enow_wakeup()
+{
+	if (conf.macslen > 0)
+	{
+		for (int i = 0; i < conf.macslen; i++)
+		{
+			if (!WifiEspNow.hasPeer(conf.macs[i]))
+			{
+				Serial.print("adding peer ");
+				for (int m = 0; m < 6; m++) Serial.printf("%02X",  conf.macs[i][m]);
+				Serial.println();
+				WifiEspNow.addPeer(conf.macs[i]);
+			}
+		}
+		int ord = enow_getorder();
+		if (ord == conf.macslen + 1)
+		{
+			//WifiEspNowBroadcast.send(reinterpret_cast<const uint8_t*>("go"), 2);
+			for (int i = 0; i < conf.macslen; i++) WifiEspNow.send(conf.macs[i], reinterpret_cast <const uint8_t * > ("go"), 2);
+			
+		}
+	}
+	else
+	{
+		state.go = true;
+	}
+}
+
+

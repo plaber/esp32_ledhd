@@ -5,6 +5,7 @@
 #endif
 #include "sub_bmp.h"
 #include "sub_btn.h"
+#include "sub_enow.h"
 #include "sub_http.h"
 #include "sub_json.h"
 #include "sub_led.h"
@@ -21,8 +22,11 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.14",
+	"v0.14e",
 	"LedHDxx",
+	{}, //macs
+	0, //macson
+	0, //macslen
 	0, //wait
 	4, //brgn
 	10, //mode
@@ -30,8 +34,9 @@ struct config conf = {
 	5.5, //vcc
 	0, //cont
 	0, //psr
-	0, //skwf
-	0, //bluetooth
+	false, //skwf
+	false, //bluetooth
+	false, //enow
 	{22,25,26,27,0,0}, //pins
 	BTN_PIN,
 	PWR_PIN,
@@ -65,11 +70,8 @@ File file;
 
 void setup()
 {
+	json_load();
 	#ifndef ARDUINO_ESP32C3_DEV
-		Preferences preferences;
-		preferences.begin("conf", true);
-		conf.mode = preferences.getUChar("mode", 10);
-		preferences.end();
 		if (conf.mode == 10 || conf.mode == 14)
 		{
 			conf.pinb = 4;
@@ -97,6 +99,13 @@ void setup()
 	Serial.println();
 	Serial.printf("Initializing... %d\n", CORE_DEBUG_LEVEL);
 	
+	led_init();
+	led_calccont(conf.cont);
+	led_brgn();
+	led_show();
+	
+	check_up();
+
 	conf.psr = ESP.getPsramSize();
 	Serial.printf("Total PSRAM: %d\n", conf.psr);
 	if (conf.psr)
@@ -113,19 +122,12 @@ void setup()
 	}
 	
 	Serial.printf("fs begin %d\n", FILESYSTEM.begin());
-	json_load();
-	led_init();
-	led_calccont(conf.cont);
-	led_brgn();
-	led_show();
-	
-	check_up();
-	
 	bmp_init();
 	bmp_max();
 	root = FILESYSTEM.open("/");
 	bmp_next();
 	delay(100);
+	led_drawvcc();
 
 	if (conf.bt)
 	{
@@ -139,14 +141,32 @@ void setup()
 	{
 		Serial.println("wifi_init");
 		wifi_init();
-		if (conf.skwf == 1)
+		if (conf.enow)
 		{
-			state.go = true;
+			int px = enow_getorder();
+			for (int i = 0; i < px; i++) led_setpxall(i, green);
+			led_show();
+			enow_begin();
+			delay(200);
+			int lp = 0;
+			while (state.go == false)
+			{
+				unsigned long time = millis();
+				while(millis() - time < 100)
+				{
+					enow_poll();
+					check_off();
+				}
+				enow_wakeup();
+				lp++;
+				if(lp == 100) {led_drawvcc(); lp = 0;}
+			}
+			enow_end();
 		}
 		else
 		{
 			Serial.println("wifi_conn");
-			wifi_conn();
+			if (conf.skwf == false) wifi_conn();
 		}
 		Serial.println("http_begin");
 		http_begin();
@@ -154,6 +174,7 @@ void setup()
 		udp_begin();
 	}
 	
+	int lp = 0;
 	while (state.go == false)
 	{
 		if (conf.bt)
@@ -169,6 +190,8 @@ void setup()
 			ftp_poll();
 		}
 		check_off();
+		lp++;
+		if(lp == 1000) {led_drawvcc(); lp = 0;}
 		delay(1);
 	}
 }
@@ -217,11 +240,11 @@ void loop()
 					int spidx = pic.indexOf(" ");
 					if (spidx == -1 || spidx == pic.length() - 1)
 					{
-						Serial.println(F("prog err: no second arg"));
+						Serial.println("prog err: no second arg");
 						udp_poll();
 						if (prgfile.position() >= prgfile.size()){
 							prgfile.close();
-							Serial.println(F("file closed"));
+							Serial.println("file closed");
 						}
 					}
 					else
@@ -251,12 +274,9 @@ void loop()
 		ftp_poll();
 		check_off();
 		bmp_batlog();
-		if (conf.bt)
-		{
-			#ifdef USEBLE
-			ble_poll();
-			#endif
-		}
+		#ifdef USEBLE
+		if (conf.bt) ble_poll();
+		#endif
 		delay(1);
 	}
 }

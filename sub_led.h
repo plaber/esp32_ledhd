@@ -20,9 +20,13 @@ void led_calccont(int confcont);
 void led_blink(int r, int g, int b);
 void led_blinkudp();
 void led_drawip(int d);
+void led_drawvcc();
 void led_brgn();
 void led_brgn(int brgn);
 void led_init();
+#ifndef ARDUINO_ESP32C3_DEV
+void led_setpx(int i, RgbColor &color, bool flip);
+#endif
 void led_setpx(int i, RgbColor &color);
 void led_setpx(int i, RgbColor &color, int str);
 void led_setpxall(int i, RgbColor &color);

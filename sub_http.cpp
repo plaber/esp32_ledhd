@@ -120,7 +120,9 @@ td {padding: 0 10px}
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
-<a href='/prog'>prog</a>
+<a href='/prog'>prog</a>   
+<a href='/config'>conf</a>   
+<a href='/update'>updt</a>
 <br><br>
 
 <table border=1><caption>LED HD <span id='ver'></span></caption>
@@ -151,7 +153,8 @@ td {padding: 0 10px}
 		<td id=mode></td></tr>
 	<tr><td>программы</td>
 		<td><button onclick="r('prg','m')">-</button></td>
-		<td><button onclick="r('prg','p')">+</button></td>
+		<td><button onclick="r('prg','p')">+</button>   
+			<button onclick="r('prg','n')">x</button></td>
 		<td id=prg></td></tr>
 	<tr><td>настройки</td>
 		<td><button onclick="r('cmt')">сохранить</button></td>
@@ -177,8 +180,6 @@ td {padding: 0 10px}
 <input type=button value='сохранить' onClick="r('wpref',vl('wprefv'))"><br><span id=wpref></span></td></tr>
 </table><br><br>
 
-<a href='/config'>настройки</a><br><br>
-<a href='/update'>обновление</a><br>
 <script>
 	function vl(id){var el=document.getElementById(id); return el.value;}
 	function vr(nm){var ra=document.getElementsByName(nm);for(var i=0;i<ra.length;i++)if(ra[i].checked) return ra[i].value;}
@@ -217,7 +218,9 @@ td {padding: 0 10px;}
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
-<a href='/prog'>prog</a>
+<a href='/prog'>prog</a>   
+<a href='/config'>conf</a>   
+<a href='/update'>updt</a>
 <br><br>
 )=====";
 
@@ -307,7 +310,7 @@ void handleFiles()
 		}
 	}
 	server.sendContent(
-		"space:" + String(FILESYSTEM.usedBytes(), DEC) + " / " + String(FILESYSTEM.totalBytes(), DEC) + F(" [free ") +  String(FILESYSTEM.totalBytes() - FILESYSTEM.usedBytes(), DEC) + F("]")
+		"space:" + String(FILESYSTEM.usedBytes(), DEC) + " / " + String(FILESYSTEM.totalBytes(), DEC) + " [free " +  String(FILESYSTEM.totalBytes() - FILESYSTEM.usedBytes(), DEC) + "]"
 	);
 	server.sendContent(content_files2);
 	File root = FILESYSTEM.open("/");
@@ -397,7 +400,12 @@ input {width: 75px;}
 <script type="text/javascript" src="./tln.min.js"></script>
 </head>
 <body>
-<a href='/'>back</a><br><br>
+<a href='/'>main</a>   
+<a href='/files'>files</a>   
+<a href='/prog'>prog</a>   
+<a href='/config'>conf</a>   
+<a href='/update'>updt</a>
+<br><br>
 leds <input type='number' id=ledv  min='3'><input type=button value="set" onclick="r('leds',vl('ledv'))"> <span id='leds'></span><br><br>
 <input type=button value='пои 6x12' onclick="r('mode',10)">
 <input type=button value='пои 4x20' onclick="r('mode',14)">
@@ -552,18 +560,34 @@ void handleConfig()
 		server.sendContent(bmp_conf());
 	}
 	server.sendContent("<script>TLN.append_line_numbers('f1');</script>");
-	if (FILESYSTEM.exists("/config.txt"))
+	server.sendContent("<hr><p style='font-family:monospace'>");
+	String ans = "";
+	ans += "wait=" + String(conf.wait, DEC) + "<br>";
+	ans += "brgn=" + String(conf.brgn, DEC) + "<br>";
+	ans += "mode=" + String(conf.mode, DEC) + "<br>";
+	ans += "leds=" + String(conf.leds, DEC) + "<br>";
+	ans += "vccc=" + String(conf.vcc, 3)    + "<br>";
+	ans += "cont=" + String(conf.cont, DEC) + "<br>";
+	ans += "skwf=" + String(conf.skwf, DEC) + "<br>";
+	ans += "enow=" + String(conf.enow, DEC) + "<br>";
+	ans += "blth=" + String(conf.bt, DEC)   + "<br>";
+	ans += "bpms=" + String(state.bpm, DEC) + "<br>";
+	ans += "ssd1=" + ssid[1]                + "<br>";
+	ans += "pss1=" + str_encode(pass[1])    + "<br>";
+	ans += "ssd2=" + ssid[2]                + "<br>";
+	ans += "pss2=" + str_encode(pass[2])    + "<br>";
+	ans += "wprf=" + conf.wpref             + "<br>";
+	ans += "whdr=" + String(state.whdr, DEC)+ "<br>";
+	ans += "prog=" + state.progname         + "<br>";
+	ans += "macslen = " + String(conf.macslen, DEC) + "<br>";
+	server.sendContent(ans);
+	for(int i = 0; i < conf.macslen; i++)
 	{
-		File cnffile = FILESYSTEM.open("/config.txt", "r");
-		server.sendContent("<hr><p style='font-family:monospace'>");
-		while (cnffile.available())
-		{
-			String confs = cnffile.readStringUntil('\n');
-			server.sendContent(confs + "<br>");
-		}
-		cnffile.close();
-		server.sendContent("</p>");
+		char mcb[17] = {0};
+		sprintf(mcb, "%02X%02X%02X%02X%02X%02X<br>", conf.macs[i][0], conf.macs[i][1], conf.macs[i][2], conf.macs[i][3], conf.macs[i][4], conf.macs[i][5]);
+		server.sendContent(mcb);
 	}
+	server.sendContent("</p>");
 	server.sendContent(
 		"</body>\n</html>"
 	);
@@ -677,7 +701,7 @@ void handleReq()
 	String ans = get_answ(server.argName(0), server.arg(0));
 	server.send(200, textplain, ans);
 	
-	if (ans == F("restart"))
+	if (ans == "restart")
 	{
 		led_clear();
 		delay(500);
@@ -696,7 +720,9 @@ static const char content_prog[] PROGMEM = R"=====(
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
-<a href='/prog'>prog</a>
+<a href='/prog'>prog</a>   
+<a href='/config'>conf</a>   
+<a href='/update'>updt</a>
 <br><br>
 
 mp3 <input type='file' onchange='ws.loadBlob(this.files[0]);'>
@@ -961,7 +987,7 @@ void http_begin()
 	server.on("/req", handleReq);
 	server.on("/files", handleFiles);
 	server.on("/filesap", handleFiles);
-	server.on(F("/prog"), handleProg);
+	server.on("/prog", handleProg);
 	server.on("/pics", handlePics);
 	server.on("/config", handleConfig);
 	server.on("/buf", handleBuf);

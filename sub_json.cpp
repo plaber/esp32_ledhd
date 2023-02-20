@@ -33,71 +33,97 @@ String str_decode(String in)
 	return String(ans);
 }
 
+void mac_decode(String in, uint8_t *ans)
+{
+	int len = in.length();
+	char buf[] = "00";
+	for (int j = 0; j < len; j += 2)
+	{
+		if (j == 12) break;
+		buf[0] = in.charAt(j);
+		buf[1] = in.charAt(j + 1);
+		ans[j / 2] = strtol(buf, NULL, 16);
+	}
+}
+
 void json_save()
 {
 	Preferences preferences;
 	preferences.begin("conf", false);
-	preferences.putUChar("mode", conf.mode);
-	preferences.end();
-
-	String jsonString = "";
-	jsonString += "wait=" + String(conf.wait, DEC) + "\n";
-	jsonString += "brgn=" + String(conf.brgn, DEC) + "\n";
-	jsonString += "mode=" + String(conf.mode, DEC) + "\n";
-	jsonString += "leds=" + String(conf.leds, DEC) + "\n";
-	jsonString += "vccc=" + String(conf.vcc, 3) + "\n";
-	jsonString += "cont=" + String(conf.cont, DEC) + "\n";
-	jsonString += "skwf=" + String(conf.skwf, DEC) + "\n";
-	jsonString += "blth=" + String(conf.bt, DEC) + "\n";
-	jsonString += "bpms=" + String(state.bpm, DEC) + "\n";
+	if (conf.wpref != "LedHDxx" && conf.wpref != "LedHD72" && conf.wpref != "LedHD80")
+	{
+		preferences.putString("wprf", conf.wpref);
+	}
+	else
+	{
+		preferences.remove("wprf");
+	}
+	preferences.putUChar( "mlen", conf.macslen);
+	preferences.putBytes( "mmac", conf.macs, 96);
+	preferences.putInt(   "wait", conf.wait);
+	preferences.putUChar( "brgn", conf.brgn);
+	preferences.putUChar( "mode", conf.mode);
+	preferences.putInt(   "leds", conf.leds);
+	preferences.putFloat( "vccc", conf.vcc);
+	preferences.putInt(   "cont", conf.cont);
+	preferences.putBool(  "skwf", conf.skwf);
+	preferences.putBool(  "blth", conf.bt);
+	preferences.putBool(  "enow", conf.enow);
+	preferences.putInt(   "whdr", state.whdr);
+	preferences.putUShort("bpms", state.bpm);
+	preferences.putString("prog", state.progname);
 	if (ssid[1] != "spiffs" && pass[1] != "spiffs")
 	{
-		jsonString += "ssd1=" + ssid[1] + "\n";
-		jsonString += "pss1=" + str_encode(pass[1]) + "\n";
+		preferences.putString("ssd1", ssid[1]);
+		preferences.putString("pss1", pass[1]);
+	}
+	else
+	{
+		preferences.remove("ssd1");
+		preferences.remove("pss1");
 	}
 	if (ssid[2] != "spiffs" && pass[2] != "spiffs")
 	{
-		jsonString += "ssd2=" + ssid[2] + "\n";
-		jsonString += "pss2=" + str_encode(pass[2]) + "\n";
+		preferences.putString("ssd2", ssid[2]);
+		preferences.putString("pss2", pass[2]);
 	}
-	if (conf.wpref != "LedHDxx" && conf.wpref != "LedHD72" && conf.wpref != "LedHD80")
+	else
 	{
-		jsonString += "wprf=" + conf.wpref + "\n";
+		preferences.remove("ssd2");
+		preferences.remove("pss2");
 	}
-	jsonString += "whdr=" + String(state.whdr, DEC) + "\n";
-	jsonString += "prog=" + state.progname;
-	File c = FILESYSTEM.open("/config.txt", "w");
-	c.print(jsonString);
-	c.close();
+	preferences.end();
 }
 
 void json_load()
 {
-	if (FILESYSTEM.exists("/config.txt"))
-	{
-		File cnffile = FILESYSTEM.open("/config.txt", "r");
-		while (cnffile.available())
-		{
-			String confs = cnffile.readStringUntil('\n');
-			String sn = confs.substring(0, 4);
-			String sv = confs.substring(4 + 1);
-			if(sn == "wait") conf.wait = sv.toInt();
-			if(sn == "brgn") conf.brgn = sv.toInt();
-			if(sn == "mode") conf.mode = sv.toInt();
-			if(sn == "leds") conf.leds = sv.toInt();
-			if(sn == "vccc") conf.vcc = sv.toFloat();
-			if(sn == "cont") conf.cont = sv.toInt();
-			if(sn == "skwf") conf.skwf = sv.toInt();
-			if(sn == "blth") conf.bt = sv.toInt();
-			if(sn == "bpms") state.bpm = sv.toInt();
-			if(sn == "ssd1") ssid[1] = sv;
-			if(sn == "pss1") pass[1] = str_decode(sv);
-			if(sn == "ssd2") ssid[2] = sv;
-			if(sn == "pss2") pass[2] = str_decode(sv);
-			if(sn == "wprf") conf.wpref = sv;
-			if(sn == "whdr") state.whdr = sv.toInt();
-			if(sn == "prog") state.progname = sv;
-		}
-		cnffile.close();
-	}
+	Preferences preferences;
+	preferences.begin("conf", true);
+	String tmp_wprf = preferences.getString("wprf", ""); 
+	if (tmp_wprf != "") conf.wpref = tmp_wprf;
+	conf.macslen = preferences.getUChar( "mlen", 0);
+	preferences.getBytes( "mmac", conf.macs, 96);
+	conf.wait = preferences.getInt(   "wait", 0);
+	conf.brgn = preferences.getUChar( "brgn", 4);
+	conf.mode = preferences.getUChar( "mode", 10);
+	conf.leds = preferences.getInt(   "leds", 20);
+	conf.vcc  = preferences.getFloat( "vccc", 2.0);
+	conf.cont = preferences.getInt(   "cont", 0);
+	conf.skwf = preferences.getBool(  "skwf", false);
+	conf.bt   = preferences.getBool(  "blth", false);
+	conf.enow = preferences.getBool(  "enow", false);
+	state.whdr = preferences.getInt(  "whdr", 3);
+	state.bpm  = preferences.getUShort("bpms", 4000);
+	state.progname = preferences.getString("prog", "no_prog");
+	ssid[1] = preferences.getString("ssd1", "spiffs");
+	pass[1] = preferences.getString("pss1", "spiffs");
+	ssid[2] = preferences.getString("ssd2", "spiffs");
+	pass[2] = preferences.getString("pss2", "spiffs");
+	preferences.end();
+}
+
+void json_clear()
+{
+	nvs_flash_erase();
+	nvs_flash_init();
 }

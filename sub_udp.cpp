@@ -1,6 +1,7 @@
 #include "sub_udp.h"
 #include "conf.h"
 #include "sub_bmp.h"
+#include "sub_enow.h"
 #include "sub_json.h"
 #include "sub_led.h"
 #include "sub_wifi.h"
@@ -102,6 +103,19 @@ String get_answ(String san, String sav)
 		json_save();
 		return "save ok";
 	}
+	if (san == "conf")
+	{
+		String ans;
+		ans += "prog:" + String(state.progname);
+		ans += " macslen:" + String(conf.macslen) + " ";
+		char bufm[14];
+		for (int i = 0; i < conf.macslen; i++)
+		{
+			sprintf(bufm, "%02X%02X%02X%02X%02X%02X,", conf.macs[i][0],conf.macs[i][1],conf.macs[i][2],conf.macs[i][3],conf.macs[i][4],conf.macs[i][5]);
+			ans += String(bufm);
+		}
+		return ans;
+	}
 	if (san == "cont")
 	{
 		int savi = sav.toInt();
@@ -112,9 +126,20 @@ String get_answ(String san, String sav)
 	}
 	if (san == "drip")
 	{
-		IPAddress broadCast = WiFi.localIP();
-		led_drawip(broadCast[3]);
+		IPAddress myip = WiFi.localIP();
+		led_drawip(myip[3]);
 		return "draw ip";
+	}
+	if (san == "enow")
+	{
+		if (sav == "2")
+		{
+			conf.bt = false;
+			conf.skwf = true;
+			conf.enow = true;
+			json_save();
+			return "enow on";
+		}
 	}
 	if (san == "format")
 	{
@@ -162,8 +187,8 @@ String get_answ(String san, String sav)
 	}
 	if (san == "ip")
 	{
-		IPAddress broadCast = WiFi.localIP();
-		return (String(broadCast[0], DEC) + "." + String(broadCast[1], DEC) + "." + String(broadCast[2], DEC) + "." + String(broadCast[3], DEC));
+		IPAddress myip = WiFi.localIP();
+		return (String(myip[0], DEC) + "." + String(myip[1], DEC) + "." + String(myip[2], DEC) + "." + String(myip[3], DEC));
 	}
 	if (san == "leds")
 	{
@@ -191,6 +216,78 @@ String get_answ(String san, String sav)
 		WiFi.softAPmacAddress(mc);
 		sprintf(mcb, "%02X%02X%02X%02X%02X%02X", mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
 		return String(mcb);
+	}
+	if (san == "macor")
+	{
+		int px = enow_getorder();
+		led_clear();
+		for (int i = 0; i < px; i++) led_setpx(i, green);
+		led_show();
+		return "mac order";
+	}
+	if (san == "macs")
+	{
+		if (sav == "1")
+		{
+			conf.macslen = 0;
+			memset(conf.macs, 255, 16 * 6);
+			json_save();
+			return "mac_ap removed";
+		}
+		else
+		{
+			uint8_t macb[6];
+			mac_decode(sav, macb);
+			char exs = 0;
+			for (int i = 0; i < conf.macslen; i++)
+			{
+				if (strncmp((char *)macb, (char *)conf.macs[i], 6) == 0) {exs = 1; break;}
+			}
+			if (exs == 1)
+			{
+				Serial.print("mac exist ");
+				for (int m = 0; m < 6; m++) Serial.printf("%02X", conf.macs[0][m]);
+				Serial.println();
+				return "mac_ap";
+			}
+			if (conf.macslen < 16)
+			{
+				for (int i = 0; i < 6; i++) conf.macs[conf.macslen][i] = macb[i];
+				conf.macslen += 1;
+				json_save();
+				Serial.print("mac_ap saved ");
+				for (int m = 0; m < 6; m++) Serial.printf("%02X", macb[m]);
+				Serial.println();
+				return "mac_ap";
+			}
+			else
+			{
+				Serial.println("mac list full\n");
+				return "mac_ap";
+			}
+		}
+	}
+	if (san == "macun")
+	{
+		if (sav == "echo")
+		{
+			udp_sendmac();
+			uint8_t uech[8] = "macun=1";
+			udp_echo(uech, 8);
+			return "mac sended all";
+		}
+		if (sav == "unsn")
+		{
+			conf.macslen = 0;
+			memset(conf.macs, 255, 16 * 6);
+			json_save();
+			return "mac_ap removed";
+		}
+		else
+		{
+			udp_sendmac();
+			return "mac sended";
+		}
 	}
 	if (san == "mode")
 	{
@@ -310,6 +407,11 @@ String get_answ(String san, String sav)
 				state.progname = String(state.proglist[state.currprog]);
 			}
 		}
+		if (sav == "n")
+		{
+			state.currprog = 0;
+			state.progname = "no_prog";
+		}
 		int savi = sav.toInt();
 		if (savi > 0 && savi <= state.maxprog)
 		{
@@ -331,12 +433,12 @@ String get_answ(String san, String sav)
 	{
 		if (sav == "1")
 		{
-			conf.skwf = 1;
+			conf.skwf = true;
 			return "skip wait wifi on";
 		}
 		else
 		{
-			conf.skwf = 0;
+			conf.skwf = false;
 			return "skip wait wifi off";
 		}
 	}
@@ -359,6 +461,7 @@ String get_answ(String san, String sav)
 		{
 			int gvcc = get_vcc();
 			int pr = vcc2p(gvcc);
+			if (state.go == false) led_drawvcc();
 			return (String(pr, DEC) + "% (" + String(gvcc, DEC) + "mV) " + WiFi.RSSI());
 		}
 		else if (savi >= 100 && savi <= 5000)
@@ -411,7 +514,7 @@ String get_answ(String san, String sav)
 			}
 			else
 			{
-				ans = F("no ap found");
+				ans = "no ap found";
 			}
 		return ans;
 	}
@@ -454,12 +557,13 @@ void udp_poll()
 				String sn = q.substring(0, dei);
 				String sv = q.substring(dei + 1);
 				String ans = get_answ(sn, sv);
-				char ansBuf[ans.length() + 1] = {0};
-				ans.toCharArray(ansBuf, ans.length() + 1);
+				int len = ans.length() + 1;
+				char ansBuf[len] = {0};
+				ans.toCharArray(ansBuf, len);
 				Udp.beginPacket(Udp.remoteIP(), 60201);
-				uint8_t an[50] = {0};
-				memcpy(an, ansBuf, 49);
-				Udp.write(an, ans.length());
+				uint8_t an[255] = {0};
+				memcpy(an, ansBuf, 254);
+				Udp.write(an, ans.length() > 255 ? 255 : ans.length());
 				Udp.endPacket();
 				if (ans == "restart")
 				{
@@ -474,13 +578,38 @@ void udp_poll()
 
 void udp_sendip()
 {
-	IPAddress broadCast = WiFi.localIP();
+	IPAddress myip = WiFi.localIP();
 	char ansBuf[21] = {0};
-	sprintf(ansBuf, "myip %d.%d.%d.%d", broadCast[0], broadCast[1], broadCast[2], broadCast[3]);
+	sprintf(ansBuf, "myip %d.%d.%d.%d", myip[0], myip[1], myip[2], myip[3]);
 	uint8_t uans[21] = {0};
 	memcpy(uans, ansBuf, 21);
-	broadCast[3] = 255;
-	Udp.beginPacket(broadCast, 60201);
+	myip[3] = 255;
+	Udp.beginPacket(myip, 60201);
 	Udp.write(uans, 21);
 	Udp.endPacket();
 }
+
+void udp_sendmac()
+{
+	IPAddress myip = WiFi.localIP();
+	myip[3] = 255;
+	uint8_t mc[6];
+	WiFi.softAPmacAddress(mc);
+	char mcb[18] = {0};
+	sprintf(mcb, "macs=%02X%02X%02X%02X%02X%02X", mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
+	uint8_t umcb[21] = {0};
+	memcpy(umcb, mcb, 21);
+	Udp.beginPacket(myip, 8888);
+	Udp.write(umcb,18);
+	Udp.endPacket();
+}
+
+void udp_echo(uint8_t *buf, size_t s)
+{
+	IPAddress myip = WiFi.localIP();
+	myip[3] = 255;
+	Udp.beginPacket(myip, 8888);
+	Udp.write(buf, s);
+	Udp.endPacket();
+}
+

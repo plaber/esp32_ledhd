@@ -2,6 +2,7 @@
 #include "conf.h"
 #include "sub_json.h"
 #include "sub_led.h"
+#include "sub_enow.h"
 
 static int onoff = 0, offp = 0;
 static unsigned long offm = 0;
@@ -22,17 +23,23 @@ void check_off()
 	}
 	if (digitalRead(conf.pinb) == LOW && onoff == 1)
 	{
+		if (offp == 0 && conf.enow)
+		{
+			char ans[8];
+			sprintf(ans, "iamon%02d", enow_getorder());
+			enow_send(String(ans));
+		}
 		if (offm != millis())
 		{
-			offp += offm == 0 ? 3 : (millis() - offm);
+			offp += 3;
 			offm = millis();
 		}
-		Serial.printf("OFF %d / %d\n", offp, 1000);
+		//Serial.printf("OFF %d / %d\n", offp, 1000);
 		if (offp > 1000)
 		{
 			digitalWrite(conf.pinp, HIGH);
 			pinMode(conf.pinp, INPUT);
-			led_brgn(4);
+			if (conf.brgn == 4) led_brgn(2); else led_brgn(4);
 			led_show();
 		}
 	}
@@ -78,33 +85,36 @@ void check_up()
 		}
 		if (pixBut > 10 && pixBut <= 16)
 		{
-			Serial.println(F("Bt off, skwf off"));
+			Serial.println("Bt off, skwf off");
 			led_setpxall(5, green);
 			led_show();
 			delay(500);
-			conf.bt = 0;
-			conf.skwf = 0;
+			conf.bt = false;
+			conf.skwf = false;
+			conf.enow = false;
 			json_save();
 		}
 		if (pixBut > 16 && pixBut <= 22)
 		{
-			Serial.println(F("Bt off, skwf on"));
+			Serial.println("Bt off, skwf on");
 			led_setpxall(5, red);
 			led_show();
 			delay(500);
-			conf.bt = 0;
-			conf.skwf = 1;
+			conf.bt = false;
+			conf.skwf = true;
+			conf.enow = true;
 			json_save();
 		}
 		#ifdef USEBLE
 		if (pixBut > 22 && pixBut <= 28)
 		{
-			Serial.println(F("Bt on, skwf on"));
+			Serial.println("Bt on, skwf on");
 			led_setpxall(5, blue);
 			led_show();
 			delay(500);
-			conf.bt = 1;
-			conf.skwf = 1;
+			conf.bt = true;
+			conf.skwf = true;
+			conf.enow = false;
 			json_save();
 		}
 		#endif

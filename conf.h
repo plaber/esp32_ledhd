@@ -19,6 +19,9 @@ struct config
 {
 	String ver;
 	String wpref;
+	uint8_t macs[16][6];
+	uint16_t macson;
+	uint8_t macslen;
 	int wait;
 	char brgn;
 	char mode;
@@ -26,8 +29,9 @@ struct config
 	float vcc;
 	int cont;
 	int psr; //psram size
-	char skwf;
-	char bt;
+	bool skwf;
+	bool bt;
+	bool enow;
 	uint8_t pins[6];
 	uint8_t pinb;
 	uint8_t pinp;

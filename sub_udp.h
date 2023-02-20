@@ -12,5 +12,7 @@ int vcc2p(int gvcc);
 String get_answ(String san, String sav);
 void udp_poll();
 void udp_sendip();
+void udp_sendmac();
+void udp_echo(uint8_t *buf, size_t s);
 
 #endif
