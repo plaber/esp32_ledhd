@@ -124,6 +124,12 @@ String get_answ(String san, String sav)
 		conf.cont = savi;
 		return "cont set ok " + sav;
 	}
+	if (san == "delconf")
+	{
+		json_del();
+		conf.macslen = 0;
+		return F("conf deleted");	
+	}
 	if (san == "drip")
 	{
 		IPAddress myip = WiFi.localIP();
@@ -137,6 +143,7 @@ String get_answ(String san, String sav)
 			conf.bt = false;
 			conf.skwf = true;
 			conf.enow = true;
+			conf.enowone = true;
 			json_save();
 			return "enow on";
 		}
@@ -220,8 +227,8 @@ String get_answ(String san, String sav)
 	if (san == "macor")
 	{
 		int px = enow_getorder();
-		led_clear();
-		for (int i = 0; i < px; i++) led_setpx(i, green);
+		for (int i = 0; i < 22; i++) led_setpxall(i, black);
+		for (int i = 0; i < px; i++) led_setpxall(i, green);
 		led_show();
 		return "mac order";
 	}

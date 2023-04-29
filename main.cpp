@@ -22,7 +22,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.14e",
+	"v0.15",
 	"LedHDxx",
 	{}, //macs
 	0, //macson
@@ -37,6 +37,7 @@ struct config conf = {
 	false, //skwf
 	false, //bluetooth
 	false, //enow
+	false, //enowone
 	{22,25,26,27,0,0}, //pins
 	BTN_PIN,
 	PWR_PIN,

@@ -27,7 +27,7 @@ void check_off()
 		{
 			char ans[8];
 			sprintf(ans, "iamon%02d", enow_getorder());
-			enow_send(String(ans));
+			enow_send(ans);
 		}
 		if (offm != millis())
 		{

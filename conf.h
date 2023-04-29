@@ -32,6 +32,7 @@ struct config
 	bool skwf;
 	bool bt;
 	bool enow;
+	bool enowone;
 	uint8_t pins[6];
 	uint8_t pinb;
 	uint8_t pinp;

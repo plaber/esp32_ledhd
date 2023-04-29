@@ -69,9 +69,17 @@ void json_save()
 	preferences.putBool(  "skwf", conf.skwf);
 	preferences.putBool(  "blth", conf.bt);
 	preferences.putBool(  "enow", conf.enow);
+	preferences.putBool(  "enow1", conf.enowone);
 	preferences.putInt(   "whdr", state.whdr);
 	preferences.putUShort("bpms", state.bpm);
-	preferences.putString("prog", state.progname);
+	if (state.progname != "no_prog")
+	{
+		preferences.putString("prog", state.progname);
+	}
+	else
+	{
+		preferences.remove("prog");
+	}
 	if (ssid[1] != "spiffs" && pass[1] != "spiffs")
 	{
 		preferences.putString("ssd1", ssid[1]);
@@ -112,6 +120,7 @@ void json_load()
 	conf.skwf = preferences.getBool(  "skwf", false);
 	conf.bt   = preferences.getBool(  "blth", false);
 	conf.enow = preferences.getBool(  "enow", false);
+	conf.enowone = preferences.getBool(  "enow1", false);
 	state.whdr = preferences.getInt(  "whdr", 3);
 	state.bpm  = preferences.getUShort("bpms", 4000);
 	state.progname = preferences.getString("prog", "no_prog");
@@ -119,6 +128,27 @@ void json_load()
 	pass[1] = preferences.getString("pss1", "spiffs");
 	ssid[2] = preferences.getString("ssd2", "spiffs");
 	pass[2] = preferences.getString("pss2", "spiffs");
+	preferences.end();
+	if (conf.enowone)
+	{
+		preferences.begin("conf", false);
+		preferences.putBool(  "skwf", false);
+		preferences.putBool(  "enow", false);
+		preferences.putBool(  "enow1", false);
+		preferences.end();
+	}
+}
+
+void json_del()
+{
+	Preferences preferences;
+	preferences.begin("conf", false);
+	conf.macslen = 0;
+	memset(conf.macs, 0, 96);
+	state.progname = "no_prog";
+	preferences.putUChar( "mlen", conf.macslen);
+	preferences.putBytes( "mmac", conf.macs, 96);
+	preferences.remove("prog");
 	preferences.end();
 }
 

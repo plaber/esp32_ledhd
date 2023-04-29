@@ -213,6 +213,7 @@ static const char content_files1[] PROGMEM = R"=====(
 <meta charset='UTF-8'>
 <style>
 td {padding: 0 10px;}
+input {margin:0 5px 5px 0;}
 </style>
 </head>
 <body>
@@ -715,7 +716,7 @@ static const char content_prog[] PROGMEM = R"=====(
 <head>
 <title>poihd prog</title><meta charset='UTF-8'>
 <script src='prog.js'></script>
-<style>img,input {margin-right: 5px;}</style>
+<style>img,input,select {margin:0 5px 5px 0;}</style>
 </head>
 <body>
 <a href='/'>main</a>   
@@ -733,7 +734,7 @@ prog <input type='button' value='load' onClick='lp()'><input type='button' value
 pics <input type='button' value='clear' onClick='if(confirm("del all?")) ws.clearRegions()'><label><input type='checkbox' id='delrc'>del by click</label>
 <div style='width:100%;overflow:scroll;'><table id='pcs'></table></div><br>
 
-<select id='progs' onchange='loadf(this.value)'></select>
+<select id='progs' onchange='loadf(this.value)'></select><input type='button' value='del' onclick='delp()'>
 <br>
 <form method='POST'>
 name <input name='progn' id='progn' maxlength=25 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_.]/g, "")'><br>
@@ -847,6 +848,17 @@ async function savep(){
 	let t=await r.text();
 	loads(document.getElementById('progn').value);
 	alert(t);
+}
+function delp(){
+	var a = document.getElementById('progs');
+	var v = a.value, i = a.selectedIndex;
+	if (i == -1) return;
+	var t = a.options[i].text;
+	var q = confirm('delete '+t+' ?');
+	if(q) fetch('/del?f='+encodeURI('/prog_'+v+'.txt'))
+		.then((response) => {return response.text();})
+		.then((data) => {alert(data);if(data.indexOf('deleted')!=-1){a.remove(i); a.onchange();}
+	})
 }
 )=====";
 
