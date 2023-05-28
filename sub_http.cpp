@@ -105,6 +105,21 @@ String urlencode(String str)
 	return encodedString;
 }
 
+String cut_name(String fname)
+{
+	int dot = fname.lastIndexOf(".");
+	String name =  fname.substring(0, dot);
+	String ext = fname.substring(dot);
+	ext.toLowerCase();
+	String result = name.substring(0,20) + ext;
+	result.replace("&","_");
+	if (!result.startsWith("/"))
+	{
+		result = "/" + result;
+	}
+	return result;
+}
+
 static const char content_root[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
@@ -120,6 +135,7 @@ td {padding: 0 10px}
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
+<a href='/progs'>progs</a>   
 <a href='/prog'>prog</a>   
 <a href='/config'>conf</a>   
 <a href='/update'>updt</a>
@@ -219,6 +235,7 @@ input {margin:0 5px 5px 0;}
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
+<a href='/progs'>progs</a>   
 <a href='/prog'>prog</a>   
 <a href='/config'>conf</a>   
 <a href='/update'>updt</a>
@@ -235,46 +252,63 @@ static const char content_files2[] PROGMEM = R"=====(
 	Many <input type='file' id='files' multiple><input type='button' value='load' onclick='send()'> <span id='q'>ok</span><br>
 </form><br>
 <script>
-	var onErr = function (err) {console.warn(err);return new Response('error');}
-	async function send() {
-		var fl = document.getElementById('files');
-		var ans = document.getElementById('q');
-		for(var i = 0; i < fl.files.length; i++){
-			var fd = new FormData();
-			fd.append('data',fl.files[i]);
-			let r = await fetch('/load', {method: 'POST', body: fd}).catch(onErr);
-			let t = await r.text();
-			console.log(t);
-			ans.innerHTML = t;
-		}
-		ans.innerHTML = 'finish';
-		setTimeout('location.reload()',1000);
+var onErr = function (err) {console.warn(err);return new Response('error');}
+async function send() {
+	var fl = document.getElementById('files');
+	var ans = document.getElementById('q');
+	for(var i = 0; i < fl.files.length; i++){
+		var fd = new FormData();
+		fd.append('data',fl.files[i]);
+		let r = await fetch('/load', {method: 'POST', body: fd}).catch(onErr);
+		let t = await r.text();
+		console.log(t);
+		ans.innerHTML = t;
 	}
-	function showAndroidToast(toast){
-		if(typeof Android!=='undefined' && Android!==null){
-			Android.showToast(toast);
-		} else {
-			alert('Click this in android App!');
-		}
+	ans.innerHTML = 'finish';
+	setTimeout('location.reload()',1000);
+}
+function showAndroidToast(toast){
+	if(typeof Android!=='undefined' && Android!==null){
+		Android.showToast(toast);
+	} else {
+		alert('Click this in android App!');
 	}
-	function del(name, rid){
-		var qwe = confirm('delete ' + name + '?');
-		if(qwe) fetch('/del?f='+encodeURI(name))
-			.then((response) => {return response.text();})
-			.then((data) => {
-				alert(data);
-				if(data.indexOf('deleted')!=-1){
-					document.getElementById('row_'+rid).remove();
-				}
-		})
-	}
-	function refr(t){
-		t.parentNode.parentNode.children[4].firstChild.src = t.parentNode.parentNode.children[4].firstChild.getAttribute('src1');
-		console.dir(t.parentNode.parentNode.children[4].firstChild);
-	}
+}
+function del(name, rid){
+	var qwe = confirm('delete ' + name + '?');
+	if(qwe) fetch('/del?f='+encodeURI(name))
+		.then((response) => {return response.text();})
+		.then((data) => {
+			alert(data);
+			if(data.indexOf('deleted')!=-1){
+				document.getElementById('row_'+rid).remove();
+			}
+	})
+}
+function refr(t){
+	t.parentNode.parentNode.children[4].firstChild.src = t.parentNode.parentNode.children[4].firstChild.getAttribute('src1');
+	console.dir(t.parentNode.parentNode.children[4].firstChild);
+}
+async function savep(){
+	var fd=new FormData(document.forms[2]);
+	var p = /^[a-zA-z0-9_]+$/;
+	if(!p.test(fd.get('progn'))){alert('wrong prog name');return;}
+	if(!fd.get('psel')){alert('no pics selected');return;};
+	let r=await fetch('/progs',{method:'POST',body:fd}).catch(onErr);
+	let t=await r.text();
+	alert(t);
+}
+function resetp(){
+	var el = document.getElementsByName('psel');
+	for(var i=0; i<el.length; i++) el[i].checked=false;
+}
 </script>
+<form>
+<input name=prognm placeholder='prog name' maxlength=20 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_]/g, "")'>
+<input type=button value='save prog' onclick='savep()'>   
+<input type=button value='reset sel' onclick='resetp()'>   
 <table border=1>
-<tr><td>#</td><td>del</td><td>name</td><td>size</td><td>pic</td><td>h</td><td>w</td><td>bits</td><td>tp</td><td>decode</td></tr>
+<tr><td>#</td><td>del</td><td>name</td><td>size</td><td>sel</td><td>pic</td><td>h</td><td>w</td><td>bits</td><td>tp</td><td>decode</td></tr>
 )=====";
 
 void handleFiles()
@@ -325,6 +359,14 @@ void handleFiles()
 			"<td><input type='button' value='del' onClick='del(\"/" + fname + "\"," + String(numr, DEC) + ")'></td>\n" +
 			(bmp_check(fname) ? "<td onClick='showAndroidToast(\"" + String(num, DEC) + "\")'>" + fname + "</td>\n" : "<td><a href='" + fname + "' target='_blank'>" + fname + "</a></td>\n") +
 			"<td>" + file.size() + "</td>";
+		ans += "</td><td>";
+		if (bmp_check(fname))
+		{
+			ans += "<input type='checkbox' name='psel' value='";
+			ans += fname;
+			ans += "'>";
+		}
+		ans += "</td>";
 		if (fname.endsWith(exgif))
 		{
 			ans += "<td><img src1='" + fname + "'></td>";
@@ -356,7 +398,7 @@ void handleFiles()
 		numr++;
 	}
 	server.sendContent(
-		"</table>\n"
+		"</table><form>\n"
 		"<script>\n"
 		"var list =document.getElementsByTagName('img');\n"
 		"for (var i = 0; i < list.length; i++) list[i].src = list[i].getAttribute('src1');\n"
@@ -403,6 +445,7 @@ input {width: 75px;}
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
+<a href='/progs'>progs</a>   
 <a href='/prog'>prog</a>   
 <a href='/config'>conf</a>   
 <a href='/update'>updt</a>
@@ -721,6 +764,7 @@ static const char content_prog[] PROGMEM = R"=====(
 <body>
 <a href='/'>main</a>   
 <a href='/files'>files</a>   
+<a href='/progs'>progs</a>   
 <a href='/prog'>prog</a>   
 <a href='/config'>conf</a>   
 <a href='/update'>updt</a>
@@ -737,7 +781,7 @@ pics <input type='button' value='clear' onClick='if(confirm("del all?")) ws.clea
 <select id='progs' onchange='loadf(this.value)'></select><input type='button' value='del' onclick='delp()'>
 <br>
 <form method='POST'>
-name <input name='progn' id='progn' maxlength=25 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_.]/g, "")'><br>
+name <input name='progn' id='progn' maxlength=20 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_.]/g, "")'><br>
 <textarea name='prog' id='prog' rows=20 cols=30></textarea><br>
 <input type='button' value='save' onclick='savep()'>
 </form>
@@ -864,14 +908,9 @@ function delp(){
 
 void handleProg()
 {
-	if (server.args() > 0)
+	if (server.argName(0) == "progn")
 	{
-		String fname = ("/prog_") + server.arg(0).substring(0,20) + extxt;
-		if (server.arg(0).startsWith("prog") && server.arg(0).endsWith(extxt))
-		{
-			fname = server.arg(0);
-			if (fname.length() > 30) fname = fname.substring(0,25) + extxt;
-		}
+		String fname = cut_name("prog_" + server.arg(0) + extxt);
 		File prgfile = FILESYSTEM.open(fname, "w");
 		prgfile.print(server.arg(1));
 		prgfile.close();
@@ -895,6 +934,123 @@ void handleProg()
 	server.sendContent(("</script>\n"));
 	if (server.args() > 0) server.sendContent(("saved ") + String(server.arg(1).length(), DEC) + (" bytes<br>"));
 	server.sendContent(("</body>\n</html>\n"));
+}
+
+static const char content_progs[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html>
+<head>
+<title>poi progs</title><meta charset='UTF-8'>
+<style>input[type=number]{width:75px;}</style>
+<script>
+var onErr=function(err){console.warn(err);return new Response('error');}
+function move(t,d){
+	var row = t.parentNode.parentNode;
+	var sib = d ? row.nextElementSibling : row.previousElementSibling;
+	console.log(row, sib);
+	if (d) {
+		if (sib) row.parentNode.insertBefore(sib, row);
+	} else {
+		if (sib) row.parentNode.insertBefore(row, sib);
+	}
+}
+async function save(n,b){
+	var tb = b.nextElementSibling.nextElementSibling.rows;
+	var s = '';
+	for (var item of tb){
+		s += item.children.item(1).textContent + ' ' + item.children.item(3).children.item(0).value + '\n';
+	}
+	var fd = new FormData();
+	fd.append('prog', n);
+	fd.append('vals', s);
+	let r=await fetch('/progs',{method:'POST',body:fd}).catch(onErr);
+	let t=await r.text();
+	alert(t);
+}
+</script>
+</head>
+<body>
+<a href='/'>main</a>   
+<a href='/files'>files</a>   
+<a href='/progs'>progs</a>   
+<a href='/prog'>prog</a>   
+<a href='/config'>conf</a>   
+<a href='/update'>updt</a>
+<br><br>
+)=====";
+
+void handleProgs()
+{
+	if (server.args() > 0)
+	{
+		if (server.argName(0) == "prognm")
+		{
+			String fname = cut_name("prog_" + server.arg(0) + extxt);
+			String ans = "saved file: " + fname + "\r\n";
+			File prgfile = FILESYSTEM.open(fname, "w");
+			for (int i = 1; i < server.args(); i++)
+			{
+				ans += server.arg(i) + F("\r\n");
+				prgfile.print(server.arg(i) + F(" ") + String(state.bpm, DEC) + F("\n"));
+			}
+			prgfile.close();
+			bmp_max();
+			server.send(200, textplain, ans);
+			return;
+		}
+		if (server.argName(0) == "prog")
+		{
+			String fname = cut_name(server.arg(0));
+			String ans = "saved file: " + fname + "\r\n";
+			File prgfile = FILESYSTEM.open(fname, "w");
+			ans += server.arg(1);
+			prgfile.print(server.arg(1));
+			prgfile.close();
+			bmp_max();
+			server.send(200, textplain, ans);
+			return;
+		}
+	}
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, texthtml, content_progs);
+	File root = FILESYSTEM.open("/");
+	File rt = root.openNextFile();
+	while (rt)
+	{
+		String f = rt.name();
+		if (f.startsWith("prog") && f.endsWith(extxt))
+		{
+			server.sendContent(f + " <input type='button' value='save' onclick=\"save('" + f + "',this)\"><br>\n<table border=1>\n");
+			String pic;
+			while (rt.available())
+			{
+				pic = rt.readStringUntil('\n');
+				int spidx = pic.lastIndexOf(" ");
+				if (spidx == -1 || spidx == pic.length() - 1)
+				{
+					if (pic == "stop")
+						server.sendContent("<tr><td></td><td>stop</td>\n");
+					else
+						server.sendContent("<tr><td colspan=4>" + pic + "<br>prog err: no second arg</td></tr>\n");
+				}
+				else
+				{
+					String fpic = pic.substring(0, spidx);
+					String dspic = pic.substring(spidx + 1);
+					dspic.trim();
+					server.sendContent("<tr>"
+						"<td><input type=button value='&#9650;' onclick='move(this,0)'> "
+							"<input type=button value='&#9660;' onclick='move(this,1)'></td>"
+						"<td>" + fpic + "</td><td><img src='" + fpic + "'></td>"
+						"<td><input type=number value='" + dspic + "'></td></tr>\n");
+				}
+			}
+			rt.close();
+			server.sendContent("</table><br>\n");
+		}
+		rt = root.openNextFile();
+	}
+	server.sendContent("</body>\n</html>\n");
 }
 
 bool handleFileRead(String path)
@@ -926,17 +1082,7 @@ void handleFileUpload()
 	static bool odd = false;
 	if (upload.status == UPLOAD_FILE_START)
 	{
-		String filename = upload.filename;
-		int dot = filename.lastIndexOf(".");
-		String name =  filename.substring(0, dot);
-		String ext = filename.substring(dot);
-		ext.toLowerCase();
-		filename = name.substring(0,25) + ext;
-		filename.replace("&","_");
-		if (!filename.startsWith("/"))
-		{
-			filename = "/" + filename;
-		}
+		String filename = cut_name(upload.filename);
 		fsUploadFile = FILESYSTEM.open(filename, "w");
 		filename = String();
 		//led_clear();
@@ -1000,6 +1146,7 @@ void http_begin()
 	server.on("/files", handleFiles);
 	server.on("/filesap", handleFiles);
 	server.on("/prog", handleProg);
+	server.on("/progs", handleProgs);
 	server.on("/pics", handlePics);
 	server.on("/config", handleConfig);
 	server.on("/buf", handleBuf);

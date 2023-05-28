@@ -22,7 +22,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.15",
+	"v0.16",
 	"LedHDxx",
 	{}, //macs
 	0, //macson
