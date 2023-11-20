@@ -5,6 +5,7 @@
 #endif
 #include "sub_btn.h"
 #include "sub_gif.h"
+#include "sub_jpg.h"
 #include "sub_http.h"
 #include "sub_led.h"
 #include "sub_udp.h"
@@ -63,7 +64,7 @@ void bmp_load(String path)
 
 bool bmp_check(String path)
 {
-	return path.endsWith(exbmp) || path.endsWith(exgif);
+	return path.endsWith(exbmp) || path.endsWith(exgif) || path.endsWith(exjpg);
 }
 
 
@@ -87,6 +88,7 @@ void bmp_draw_poi(String path, unsigned long tm)
 		unsigned long stm = millis(); //Serial.println(stm);
 		if (path.endsWith(exbmp)) bmp_load(path);
 		if (path.endsWith(exgif)) gif_load(path);
+		if (path.endsWith(exjpg)) jpg_load(path);
 		while ((millis() - stm) < tm || state.loop == false)
 		{
 			if (state.go == false || state.next || (state.loop == false && state.setbmp > 0 && state.currbmp != state.setbmp)) break;

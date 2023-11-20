@@ -2,6 +2,7 @@
 #include "sub_httpjs.h"
 #include "sub_bmp.h"
 #include "sub_gif.h"
+#include "sub_jpg.h"
 #include "sub_json.h"
 #include "sub_led.h"
 #include "sub_udp.h"
@@ -388,7 +389,19 @@ void handleFiles()
 			ans += "<td>" + String(bm.w, DEC) + "</td>";
 			ans += "<td>" + String(bm.bits, DEC) + "</td>";
 			ans += "<td>" + String(bm.bminfo) + "</td>";
-			ans += "<td><a target='_blank' href='/req?buf=1&f=" + urlencode(fname) + "'>dec<a>  ";
+			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
+			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
+			num++;
+		}
+		if (fname.endsWith(exjpg))
+		{
+			ans += "<td><img src1='" + fname + "'></td>";
+			struct jpgheader jp = jpg_header(fname, false);
+			ans += "<td>" + String(jp.h, DEC) + "</td>";
+			ans += "<td>" + String(jp.w, DEC) + "</td>";
+			ans += "<td>-</td>";
+			ans += "<td>-</td>";
+			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
 			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
 			num++;
 		}
@@ -417,7 +430,7 @@ void handlePics()
 	while (f)
 	{
 		String fileName = f.name();
-		if (fileName.endsWith(exbmp) || fileName.endsWith(exgif) || (server.args() == 1 && server.argName(0) == "all"))
+		if (bmp_check(fileName) || (server.args() == 1 && server.argName(0) == "all"))
 		{
 			if (filen)
 				server.sendContent("\n" + fileName);
@@ -610,6 +623,7 @@ void handleConfig()
 	ans += "brgn=" + String(conf.brgn, DEC) + "<br>";
 	ans += "mode=" + String(conf.mode, DEC) + "<br>";
 	ans += "leds=" + String(conf.leds, DEC) + "<br>";
+	ans += "psrm=" + String(conf.psr,  DEC) + "<br>";
 	ans += "vccc=" + String(conf.vcc, 3)    + "<br>";
 	ans += "cont=" + String(conf.cont, DEC) + "<br>";
 	ans += "skwf=" + String(conf.skwf, DEC) + "<br>";
@@ -640,16 +654,19 @@ void handleConfig()
 void handleBuf()
 {
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-	server.send(200, texthtml, "<html>\n"
-		"<head>\n<style>\n"
-		"td {width:5px;height:5px;}\n"
-		"body {font-family: monospace;}\n"
-		"</style>\n</head>\n"
-		"<body>\n"
-	);
+	String fname;
 	if (server.args() == 1)
 	{
-		String fname = urldecode(server.arg(0));
+		fname = urldecode(server.arg(0));
+		server.send(200, texthtml, "<html>\n"
+			"<head>\n<style>\n"
+			"td {width:5px;height:5px;}\n"
+			"body {font-family: monospace;}\n"
+			"</style>\n"
+			"<title>dec " + fname + "</title>"
+			"</head>\n"
+			"<body>\n"
+		);
 		if (fname.endsWith(exgif))
 		{
 			gifheader gf = gif_load(fname, true);
@@ -660,10 +677,20 @@ void handleBuf()
 			struct bmpheader bm = bmp_load(fname, true);
 			server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(bm.size) + "<br>\n");
 		}
+		if (fname.endsWith(exjpg))
+		{
+			struct jpgheader jp = jpg_header(fname, true);
+			server.sendContent("w " + String(bmpw) + " h " + String(bmph) + " f " + String(jp.size) + "<br>\n");
+		}
+		server.sendContent(fname + "<br>");
+	}
+	else
+	{
+		server.send(200, texthtml, "no file");
+		return;
 	}
 	
 	server.sendContent(
-	state.currname + "<br>"
 	"<canvas id=canvas style='border:1px solid black'></canvas>\n"
 	"<script>\nvar w = " + String(bmpw, DEC) + ", h = " + String(bmph, DEC) + ";\n"
 		"var canvas = document.getElementById('canvas');\n"
@@ -673,18 +700,18 @@ void handleBuf()
 	"</script>\n");
 	server.sendContent("<script>\nvar img = [\n");
 	int px = 0;
-	char colbuf[1024], pord[3] = {2,1,0};
-	if (state.currname.endsWith(exgif))
-	{
-		pord[0] = 0;
-		pord[2] = 2;
-	}
+	char colbuf[1024];
 	int idxbuf = 0;
 	for (int i = 0; i < bmph; i++)
 	{
 		for (int j = 0; j < bmpw; j++)
 		{
-			sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + pord[0]),*(p + px * 3 + pord[1]),*(p + px * 3 + pord[2]));
+			if (fname.endsWith(exbmp) || fname.endsWith(exjpg)) sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + px * 3 + 2),*(p + px * 3 + 1),*(p + px * 3 + 0));
+			if (fname.endsWith(exgif))
+			{
+				int cidx = *(p + j + bmpw * i + 768) * 3;
+				sprintf(colbuf + idxbuf,"'%02X%02X%02X',", *(p + cidx + 0),*(p + cidx + 1), *(p + cidx + 2));
+			}
 			px++;
 			idxbuf += 9;
 			if(idxbuf >= 950)

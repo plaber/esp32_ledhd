@@ -15,9 +15,12 @@ RgbColor blue(0, 0, 255);
 RgbColor wblue(0, 127, 255);
 RgbColor cyan(0, 255, 255);
 
-//#define ESP_METHOD NeoEsp32I2s1X8Sk6812Method
-#define ESP_METHOD NeoEsp32I2s1X8Ws2812xMethod
-
+#define ESP_METHOD0 NeoEsp32Rmt0Ws2812xMethod
+#define ESP_METHOD1 NeoEsp32Rmt1Ws2812xMethod
+#define ESP_METHOD2 NeoEsp32Rmt2Ws2812xMethod
+#define ESP_METHOD3 NeoEsp32Rmt3Ws2812xMethod
+#define ESP_METHOD4 NeoEsp32I2s0Ws2812xMethod
+#define ESP_METHOD5 NeoEsp32I2s1Ws2812xMethod
 
 char cont[256] = {   
     0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,                              
@@ -139,12 +142,12 @@ void led_brgn()
 
 #ifndef ARDUINO_ESP32C3_DEV
 
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip0 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip1 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip2 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip3 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip4 = NULL;
-NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD>* strip5 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD0>* strip0 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD1>* strip1 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD2>* strip2 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD3>* strip3 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD4>* strip4 = NULL;
+NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD5>* strip5 = NULL;
 
 void led_init()
 {
@@ -187,12 +190,12 @@ void led_init()
 	if (strip4 != NULL) delete strip4;
 	if (strip5 != NULL) delete strip5;
 
-					  strip0 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[0]);
-					  strip1 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[1]);
-					  strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[2]);
-					  strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[3]);
-	if (conf.pins[4]) strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[4]);
-	if (conf.pins[5]) strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD> (conf.leds, conf.pins[5]);
+            strip0 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD0> (conf.leds, conf.pins[0]);
+            strip1 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD1> (conf.leds, conf.pins[1]);
+            strip2 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD2> (conf.leds, conf.pins[2]);
+            strip3 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD3> (conf.leds, conf.pins[3]);
+  if (conf.pins[4]) strip4 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD4> (conf.leds, conf.pins[4]);
+  if (conf.pins[5]) strip5 = new NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD5> (conf.leds, conf.pins[5]);
 
 	strip0->Begin();
 	strip1->Begin();

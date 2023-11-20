@@ -11,6 +11,8 @@
 #include "sub_led.h"
 #include "sub_udp.h"
 #include "sub_wifi.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 int ssid_count = 5;
 String ssid[] = {"ledControl", "spiffs", "spiffs", "scp-121",  "salat"};
@@ -22,7 +24,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.16",
+	"v0.17",
 	"LedHDxx",
 	{}, //macs
 	0, //macson
@@ -71,6 +73,7 @@ File file;
 
 void setup()
 {
+	WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 	json_load();
 	#ifndef ARDUINO_ESP32C3_DEV
 		if (conf.mode == 10 || conf.mode == 14)
