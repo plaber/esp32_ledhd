@@ -13,7 +13,7 @@ extern String pass[];
 char texthtml[10] = "text/html";
 char textplain[11] = "text/plain";
 WebServer server(80);
-HTTPUpdateServer httpUpdater;
+HTTPUpdateServer httpUpdater(true);
 FtpServer ftpSrv;
 
 unsigned char h2int(char c)
@@ -196,6 +196,8 @@ td {padding: 0 10px}
 <tr><td><input id=wprefv maxlength=15 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_]/g, "")'>&nbsp;
 <input type=button value='сохранить' onClick="r('wpref',vl('wprefv'))"><br><span id=wpref></span></td></tr>
 </table><br><br>
+
+<a href='/fs.bin'>fs.bin</a><br><br>
 
 <script>
 	function vl(id){var el=document.getElementById(id); return el.value;}
@@ -1093,6 +1095,24 @@ bool handleFileRead(String path)
 	return false;
 }
 
+void handleFsRead()
+{
+	esp_partition_iterator_t iterator = esp_partition_find(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "ffat");
+	const esp_partition_t *next_partition = esp_partition_get(iterator);
+	Serial.printf("partition addr: 0x%06x; size: 0x%06x; end: 0x%06x; label: %s\n", next_partition->address, next_partition->size, next_partition->address + next_partition->size, next_partition->label);
+
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, F("application/octet-stream"), "");
+	uint32_t ubuf[256];
+	char cbuf[1024];
+	for (int i = 0; i < next_partition->size; i+= 0x400)
+	{
+		esp_partition_read(next_partition, i, ubuf, sizeof(ubuf));
+		memcpy(cbuf,ubuf,1024);
+		server.sendContent_P(cbuf, 1024);
+	}
+}
+
 void handleNotFound()
 {
 	if (!handleFileRead(server.uri()))
@@ -1172,6 +1192,7 @@ void http_begin()
 	server.on("/req", handleReq);
 	server.on("/files", handleFiles);
 	server.on("/filesap", handleFiles);
+	server.on(F("/fs.bin"), handleFsRead);
 	server.on("/prog", handleProg);
 	server.on("/progs", handleProgs);
 	server.on("/pics", handlePics);

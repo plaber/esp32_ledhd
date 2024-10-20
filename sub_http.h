@@ -2,12 +2,13 @@
 #define SUB_HTTP_H
 
 #include <WebServer.h>
-#include <HTTPUpdateServer.h>
 #if FILESYSTEM == FFat
 #include <FFat.h>
+#include "HTTPUpdateServerFFat.h"
 #endif
 #if FILESYSTEM == SPIFFS
 #include <SPIFFS.h>
+#include <HTTPUpdateServer.h>
 #endif
 #include <SimpleFTPServer.h>
 

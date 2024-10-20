@@ -604,8 +604,8 @@ void udp_sendmac()
 	WiFi.softAPmacAddress(mc);
 	char mcb[18] = {0};
 	sprintf(mcb, "macs=%02X%02X%02X%02X%02X%02X", mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
-	uint8_t umcb[21] = {0};
-	memcpy(umcb, mcb, 21);
+	uint8_t umcb[18] = {0};
+	memcpy(umcb, mcb, 18);
 	Udp.beginPacket(myip, 8888);
 	Udp.write(umcb,18);
 	Udp.endPacket();
