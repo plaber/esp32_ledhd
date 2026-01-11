@@ -6,6 +6,8 @@
 #include "sub_led.h"
 #include "sub_wifi.h"
 
+extern File root;
+
 WiFiUDP Udp;
 char udpBuf[255]; //buffer to hold incoming packet
 
@@ -107,6 +109,7 @@ String get_answ(String san, String sav)
 	{
 		String ans;
 		ans += "prog:" + String(state.progname);
+		ans += " fold:" + String(state.foldname);
 		ans += " macslen:" + String(conf.macslen) + " ";
 		char bufm[14];
 		for (int i = 0; i < conf.macslen; i++)
@@ -147,6 +150,44 @@ String get_answ(String san, String sav)
 			json_save();
 			return "enow on";
 		}
+	}
+		if (san == "fld")
+	{
+		if (sav == "m")
+		{
+			if (state.currfold > 0)
+			{
+				state.currfold--;
+				state.foldname = String(state.foldlist[state.currfold]);
+				bmp_maxf("/" + state.foldname);
+			}
+		}
+		if (sav == "p")
+		{
+			if (state.currfold < state.maxfold - 1)
+			{
+				state.currfold++;
+				state.foldname = String(state.foldlist[state.currfold]);
+				bmp_maxf("/" + state.foldname);
+			}
+		}
+		if (sav == "n")
+		{
+			state.currfold = 0;
+			state.foldname = "no_fold";
+		}
+		int savi = sav.toInt();
+		if (savi > 0 && savi <= state.maxfold)
+		{
+			state.currfold = savi - 1;
+			state.foldname = String(state.foldlist[state.currfold]);
+			bmp_maxf("/" + state.foldname);
+		}
+		return state.foldname;
+	}
+	if (san == "fold")
+	{
+		return state.foldname;
 	}
 	if (san == "format")
 	{
@@ -317,7 +358,7 @@ String get_answ(String san, String sav)
 			{
 				case 10: 
 					conf.mode = 10;
-				#ifndef ARDUINO_ESP32C3_DEV
+				#ifdef ARDUINO_ESP32_DEV
 					conf.leds = 12;
 				#else
 					conf.leds = 32;
@@ -328,8 +369,31 @@ String get_answ(String san, String sav)
 				case 12: conf.mode = 12; conf.leds = 980; json_save(); return "mask2";
 				case 13: conf.mode = 13; conf.leds = 850; json_save(); return "свой";
 				case 14: conf.mode = 14; conf.leds = 20;  json_save(); return "poi 4";
-				case 3 : state.whdr = 3; json_save(); return "files";
-				case 4 : state.whdr = 4; json_save(); return "prog";
+				case 3 : state.whdr = 3; json_save(); root = FILESYSTEM.open("/"); bmp_maxf("/"); return "files";
+				case 4 : if (state.maxprog > 0)
+					{
+						state.whdr = 4;
+						json_save();
+						return "prog" ;
+					}
+					else
+					{
+						state.whdr = 3;
+						return "prog: no_prog" ;
+					}
+				case 5 : if (state.maxfold > 0)
+					{
+						state.whdr = 5;
+						json_save();
+						root = FILESYSTEM.open("/" + state.foldname);
+						bmp_maxf("/" + state.foldname);
+						return "fold: " + state.foldname;
+					}
+					else
+					{
+						state.whdr = 3;
+						return "fold: no_fold";
+					}
 				default: return "err mode " + sav;
 			}
 		}
@@ -397,7 +461,6 @@ String get_answ(String san, String sav)
 	}
 	if (san == "prg")
 	{
-		String prgwarn = "";
 		if (sav == "m")
 		{
 			if (state.currprog > 0)

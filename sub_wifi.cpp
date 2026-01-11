@@ -12,7 +12,7 @@ void wifi_init()
 {
 	WiFi.mode(WIFI_AP_STA);
 	uint8_t mc[6];
-	WiFi.softAPmacAddress(mc);
+	esp_read_mac(mc, ESP_MAC_WIFI_SOFTAP);
 	char buf[25] = {0};
 	sprintf(buf, "%s_%02X%02X%02X", conf.wpref, mc[3], mc[4], mc[5]);
 	WiFi.softAP(buf, "12345678");

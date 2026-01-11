@@ -164,15 +164,20 @@ td {padding: 0 10px}
 		<td><input id=bpmv type=number min=10 max=65500 style='width:100px;'></td>
 		<td><button onclick="r('bpm',vl('bpmv'))">set</button></td>
 		<td id=bpm></td></tr>
-	<tr><td>режим</td>
+	<tr><td>режим <span id=mode></span></td>
 		<td><button onclick="r('mode','3')">файлы</button></td>
 		<td><button onclick="r('mode','4')">программы</button></td>
-		<td id=mode></td></tr>
+		<td><button onclick="r('mode','5')">папки</button></td></tr>
 	<tr><td>программы</td>
 		<td><button onclick="r('prg','m')">-</button></td>
 		<td><button onclick="r('prg','p')">+</button>   
 			<button onclick="r('prg','n')">x</button></td>
 		<td id=prg></td></tr>
+	<tr><td>папки</td>
+		<td><button onclick="r('fld','m')">-</button></td>
+		<td><button onclick="r('fld','p')">+</button>   
+			<button onclick="r('fld','n')">x</button></td>
+		<td id=fld></td></tr>
 	<tr><td>настройки</td>
 		<td><button onclick="r('cmt')">сохранить</button></td>
 		<td id=cmt></td><td></td></tr>
@@ -314,9 +319,85 @@ function resetp(){
 <tr><td>#</td><td>del</td><td>name</td><td>size</td><td>sel</td><td>pic</td><td>h</td><td>w</td><td>bits</td><td>tp</td><td>decode</td></tr>
 )=====";
 
+static const char content_files3[] PROGMEM = R"=====(
+</table></form>
+<script>
+var list =document.getElementsByTagName('img');
+for (var i = 0; i < list.length; i++) list[i].src = list[i].getAttribute('src1');
+const urlP = new URLSearchParams(window.location.search);
+const myP = urlP.get('dir');
+if (myP){
+	var inp = document.createElement('input');
+	inp.setAttribute('type', 'hidden');
+	inp.setAttribute('name', 'dir');
+	inp.setAttribute('value', myP);
+	document.forms[1].appendChild(inp);
+}
+</script>
+</body></html>
+)=====";
+
+String printRow(File file, int numr, int num, bool showinfo)
+{
+	String fname = file.name();
+	String fpath = file.path();
+	String ans = "<tr id='row_" +  String(numr, DEC) + "'>\n"
+		"<td>" + String(numr, DEC) + "</td>\n"
+		"<td><input type='button' value='del' onClick='del(\"" + fpath + "\"," + String(numr, DEC) + ")'></td>\n";
+	if (bmp_check(fname))
+		ans += "<td onClick='showAndroidToast(\"" + String(num, DEC) + "\")'>" + fpath + "</td>\n";
+	else if (file.isDirectory())
+		ans += "<td><a href='/files?dir=" + fname + "' target='_blank'>DIR:" + fname + "</a></td>\n";
+	else
+		ans += "<td><a href='" + fpath + "' target='_blank'>" + fpath + "</a></td>\n";
+	ans += "<td>" + String(file.size()) + "</td>";
+	if (bmp_check(fname))
+	{
+		ans += "<td><input type='checkbox' name='psel' value='" + fname + "'></td>";
+		ans += "<td><img src1='" + fpath + "'></td>";
+		if (showinfo)
+		{
+			if (fname.endsWith(exgif))
+			{
+				struct gifheader gf = gif_load(fpath, false);
+				char mod[4] = {gf.mod[0], gf.mod[1], gf.mod[2], 0};
+				ans += "<td>" + String(gf.h, DEC) + "</td>";
+				ans += "<td>" + String(gf.w, DEC) + "</td>";
+				ans += "<td>" + String(gf.cdp + 1, DEC) + "</td>";
+				ans += "<td>" + String(mod) + "</td>";
+			}
+			if (fname.endsWith(exbmp))
+			{
+				struct bmpheader bm = bmp_load(fpath, false);
+				ans += "<td>" + String(bm.h, DEC) + "</td>";
+				ans += "<td>" + String(bm.w, DEC) + "</td>";
+				ans += "<td>" + String(bm.bits, DEC) + "</td>";
+				ans += "<td>" + String(bm.bminfo) + "</td>";
+			}
+			if (fname.endsWith(exjpg))
+			{
+				struct jpgheader jp = jpg_header(fpath, false);
+				ans += "<td>" + String(jp.h, DEC) + "</td>";
+				ans += "<td>" + String(jp.w, DEC) + "</td>";
+				ans += "<td>-</td>";
+				ans += "<td>-</td>";
+			}
+		}
+		else
+		{
+			ans += "<td></td><td></td><td></td><td></td>";
+		}
+		ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fpath) + "'>dec<a>  ";
+		ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
+	}
+	ans += "</tr>\n";
+	return ans;
+}
+
 void handleFiles()
 {
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	String init_path = "/";
 	if (server.args() > 0){
 		String sav =server.arg(0);
 		if (server.argName(0) == "format")
@@ -329,6 +410,8 @@ void handleFiles()
 			server.send(200, texthtml, "<a href='/files'>back</a><br> format " + String(f ? "ok," : "fail,") + String(b ? " begin" : " not begin"));
 			return;
 		}
+		if (server.argName(0) == "dir")
+			init_path += sav;
 	}
 	server.send(200, texthtml, content_files1);
 	if (server.args() > 0){
@@ -351,74 +434,32 @@ void handleFiles()
 		"space:" + String(FILESYSTEM.usedBytes(), DEC) + " / " + String(FILESYSTEM.totalBytes(), DEC) + " [free " +  String(FILESYSTEM.totalBytes() - FILESYSTEM.usedBytes(), DEC) + "]"
 	);
 	server.sendContent(content_files2);
-	File root = FILESYSTEM.open("/");
+	File root = FILESYSTEM.open(init_path);
 	File file = root.openNextFile();
 	int numr = 1, num = 1;
+	String ans = "";
 	while (file)
 	{
 		String fname = file.name();
-		String ans = "<tr id='row_" +  String(numr, DEC) + "'>\n"
-			"<td>" + String(numr, DEC) + "</td>\n"
-			"<td><input type='button' value='del' onClick='del(\"/" + fname + "\"," + String(numr, DEC) + ")'></td>\n" +
-			(bmp_check(fname) ? "<td onClick='showAndroidToast(\"" + String(num, DEC) + "\")'>" + fname + "</td>\n" : "<td><a href='" + fname + "' target='_blank'>" + fname + "</a></td>\n") +
-			"<td>" + file.size() + "</td>";
-		ans += "</td><td>";
-		if (bmp_check(fname))
-		{
-			ans += "<input type='checkbox' name='psel' value='";
-			ans += fname;
-			ans += "'>";
-		}
-		ans += "</td>";
-		if (fname.endsWith(exgif))
-		{
-			ans += "<td><img src1='" + fname + "'></td>";
-			struct gifheader gf = gif_load(fname, false);
-			char mod[4] = {gf.mod[0], gf.mod[1], gf.mod[2], 0};
-			ans += "<td>" + String(gf.h, DEC) + "</td>";
-			ans += "<td>" + String(gf.w, DEC) + "</td>";
-			ans += "<td>" + String(gf.cdp + 1, DEC) + "</td>";
-			ans += "<td>" + String(mod) + "</td>";
-			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
-			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
-			num++;
-		}
-		if (fname.endsWith(exbmp))
-		{
-			ans += "<td><img src1='" + fname + "'></td>";
-			struct bmpheader bm = bmp_load(fname, false);
-			ans += "<td>" + String(bm.h, DEC) + "</td>";
-			ans += "<td>" + String(bm.w, DEC) + "</td>";
-			ans += "<td>" + String(bm.bits, DEC) + "</td>";
-			ans += "<td>" + String(bm.bminfo) + "</td>";
-			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
-			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
-			num++;
-		}
-		if (fname.endsWith(exjpg))
-		{
-			ans += "<td><img src1='" + fname + "'></td>";
-			struct jpgheader jp = jpg_header(fname, false);
-			ans += "<td>" + String(jp.h, DEC) + "</td>";
-			ans += "<td>" + String(jp.w, DEC) + "</td>";
-			ans += "<td>-</td>";
-			ans += "<td>-</td>";
-			ans += "<td><a target='_blank' href='/buf?f=" + urlencode(fname) + "'>dec<a>  ";
-			ans += "<a href='javascript:void(0)' onclick='refr(this)'>rfr<a></td>";
-			num++;
-		}
-		ans += "</tr>";
+		ans = printRow(file, numr, num, true);
 		server.sendContent(ans);
+		if(file.isDirectory())
+		{
+			Serial.println("dir: " + fname);
+			File root2 = FILESYSTEM.open("/" + fname);
+			File file2 = root2.openNextFile();
+			while (file2)
+			{
+				ans = printRow(file2, numr, num, true);
+				server.sendContent(ans);
+				file2 = root2.openNextFile();
+			}
+		}
 		file = root.openNextFile();
+		if (bmp_check(fname)) num++;
 		numr++;
 	}
-	server.sendContent(
-		"</table><form>\n"
-		"<script>\n"
-		"var list =document.getElementsByTagName('img');\n"
-		"for (var i = 0; i < list.length; i++) list[i].src = list[i].getAttribute('src1');\n"
-		"</script>\n"
-		"</body>\n</html>");
+	server.sendContent(content_files3);
 	server.sendContent("");
 }
 
@@ -639,6 +680,9 @@ void handleConfig()
 	ans += "wprf=" + conf.wpref             + "<br>";
 	ans += "whdr=" + String(state.whdr, DEC)+ "<br>";
 	ans += "prog=" + state.progname         + "<br>";
+	for (int i=0; i < state.maxprog; i++) ans += "prog" + String(i, DEC) + "=" + state.proglist[i] + "<br>";
+	ans += "fold=" + state.foldname         + "<br>";
+	for (int i=0; i < state.maxfold; i++) ans += "fold" + String(i, DEC) + "=" + state.foldlist[i] + "<br>";
 	ans += "macslen = " + String(conf.macslen, DEC) + "<br>";
 	server.sendContent(ans);
 	for(int i = 0; i < conf.macslen; i++)
@@ -1122,6 +1166,8 @@ void handleNotFound()
 }
 
 File fsUploadFile;
+String updir = "";
+
 
 void handleFileUpload()
 {
@@ -1129,7 +1175,7 @@ void handleFileUpload()
 	static bool odd = false;
 	if (upload.status == UPLOAD_FILE_START)
 	{
-		String filename = cut_name(upload.filename);
+		String filename = cut_name(updir + "/" + upload.filename);
 		fsUploadFile = FILESYSTEM.open(filename, "w");
 		filename = String();
 		//led_clear();
@@ -1156,7 +1202,7 @@ void handleFileUpload()
 			//led_show();
 			state.calcmax = true;
 			server.sendHeader("Access-Control-Allow-Origin", "*");
-			server.send(200, texthtml, upload.filename + " ok<script>setTimeout(function(){location.href='/files';},1000);</script>");
+			server.send(200, texthtml, upload.filename + " ok<script>setTimeout(function(){location.href='/files" + (updir.length() > 0 ? "?dir=" + updir : "") + "';},1000);</script>");
 			Serial.println("uploaded " + upload.filename);
 		}
 	}
@@ -1200,6 +1246,16 @@ void http_begin()
 	server.on("/buf", handleBuf);
 	server.on("/load", HTTP_POST, []() {
 		server.send(200, texthtml, " ");
+		if (server.args() > 0){
+			String sav =server.arg(0);
+			String san = server.argName(0);
+			if (san == "dir") updir = sav; else updir = "";
+			Serial.println("arg: " + san + " val: " + sav);
+		}
+		else
+		{
+			updir = "";
+		}
 	}, handleFileUpload);
 	server.on("/del", handleFileDelete);
 	server.on("/tln.min.css", []() {

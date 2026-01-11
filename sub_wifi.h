@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_mac.h>
 
 void wifi_init();
 void wifi_conn();

@@ -37,6 +37,7 @@ void bmp_draw_mask(String path, unsigned long tm);
 void bmp_draw_last(int fps);
 void bmp_init();
 void bmp_max();
+void bmp_maxf(String fld);
 String bmp_conf();
 void bmp_savecost();
 void bmp_loadcost();

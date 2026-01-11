@@ -80,6 +80,14 @@ void json_save()
 	{
 		preferences.remove("prog");
 	}
+	if (state.foldname != "no_fold")
+	{
+		preferences.putString("fold", state.foldname);
+	}
+	else
+	{
+		preferences.remove("fold");
+	}
 	if (ssid[1] != "spiffs" && pass[1] != "spiffs")
 	{
 		preferences.putString("ssd1", ssid[1]);
@@ -124,6 +132,7 @@ void json_load()
 	state.whdr = preferences.getInt(  "whdr", 3);
 	state.bpm  = preferences.getUShort("bpms", 4000);
 	state.progname = preferences.getString("prog", "no_prog");
+	state.foldname = preferences.getString("fold", "no_fold");
 	ssid[1] = preferences.getString("ssd1", "spiffs");
 	pass[1] = preferences.getString("pss1", "spiffs");
 	ssid[2] = preferences.getString("ssd2", "spiffs");

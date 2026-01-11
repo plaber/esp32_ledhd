@@ -7,7 +7,7 @@
 //#define FILESYSTEM SPIFFS
 //#define USEBLE
 
-#ifndef ARDUINO_ESP32C3_DEV
+#ifdef ARDUINO_ESP32_DEV
 #define BTN_PIN 12
 #define PWR_PIN 14
 #else
@@ -28,7 +28,7 @@ struct config
 	int leds;
 	float vcc;
 	int cont;
-	int psr; //psram size
+	int psr;
 	bool skwf;
 	bool bt;
 	bool enow;
@@ -55,6 +55,10 @@ struct status
 	uint8_t currprog;
 	String progname;
 	char proglist[15][32];
+	uint8_t maxfold;
+	uint8_t currfold;
+	String foldname;
+	char foldlist[15][32];
 	bool calcmax;
 };
 

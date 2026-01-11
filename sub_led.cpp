@@ -140,7 +140,7 @@ void led_brgn()
 	led_brgn(conf.brgn);
 }
 
-#ifndef ARDUINO_ESP32C3_DEV
+#ifdef ARDUINO_ESP32_DEV
 
 NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD0>* strip0 = NULL;
 NeoPixelBrightnessBus<NeoGrbFeature, ESP_METHOD1>* strip1 = NULL;
@@ -329,6 +329,10 @@ void led_clearto(char r, char g, char b)
 }
 
 #else
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR != 2
+#error "YOU MUST USE ESP32 2.0.17 FOR C3 BOARDS"
+#endif
 
 NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod>* strip0 = NULL;
 

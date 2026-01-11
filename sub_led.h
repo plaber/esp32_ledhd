@@ -24,7 +24,7 @@ void led_drawvcc();
 void led_brgn();
 void led_brgn(int brgn);
 void led_init();
-#ifndef ARDUINO_ESP32C3_DEV
+#ifdef ARDUINO_ESP32_DEV
 void led_setpx(int i, RgbColor &color, bool flip);
 #endif
 void led_setpx(int i, RgbColor &color);

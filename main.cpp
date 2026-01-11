@@ -24,44 +24,48 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.18",
-	"LedHDxx",
-	{}, //macs
-	0, //macson
-	0, //macslen
-	0, //wait
-	4, //brgn
-	10, //mode
-	20, //leds
-	5.5, //vcc
-	0, //cont
-	0, //psr
-	false, //skwf
-	false, //bluetooth
-	false, //enow
-	false, //enowone
-	{22,25,26,27,0,0}, //pins
-	BTN_PIN,
-	PWR_PIN,
-	ADC1_CHANNEL_0 //36
+	.ver = "v0.19",
+	.wpref = "LedHDxx",
+	.macs = {0},
+	.macson = 0,
+	.macslen = 0,
+	.wait = 0,
+	.brgn = 4,
+	.mode = 10,
+	.leds = 20,
+	.vcc = 5.5,
+	.cont = 0,
+	.psr = 0, //psram size
+	.skwf = false,
+	.bt = false, //bluetooth
+	.enow = false,
+	.enowone = false,
+	.pins = {22,25,26,27,0,0},
+	.pinb = BTN_PIN,
+	.pinp = PWR_PIN,
+	.vccch = ADC1_CHANNEL_0 //36
 };
 
 struct status state = {
-	false, //go
-	true, //loop
-	false, //next
-	0, //maxbmp
-	0, //currbmp
-	"no_bmp", //currname
-	0, //setbmp
-	3, //whdr
-	4000, //bpm
-	0, //btt test
-	0, //maxprog
-	0, //curr prog
-	"no_prog", //curr prog name
-	0, //proglist
-	false //calcmax
+	.go = false,
+	.loop = true,
+	.next = false,
+	.maxbmp = 0,
+	.currbmp = 0,
+	.currname = "no_bmp",
+	.setbmp = 0,
+	.whdr = 3,
+	.bpm = 4000,
+	.uptime = 0, //btt test
+	.maxprog = 0,
+	.currprog = 0,
+	.progname = "no_prog", //curr prog name
+	.proglist = {0},
+	.maxfold = 0,
+	.currfold = 0,
+	.foldname = "no_fold", //curr fold name
+	.foldlist= {0},
+	.calcmax = false
 };
 
 int bmpw = 0;
@@ -75,7 +79,7 @@ void setup()
 {
 	WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 	json_load();
-	#ifndef ARDUINO_ESP32C3_DEV
+	#ifdef ARDUINO_ESP32_DEV
 		if (conf.mode == 10 || conf.mode == 14)
 		{
 			conf.pinb = 4;
@@ -128,6 +132,8 @@ void setup()
 	Serial.printf("fs begin %d\n", FILESYSTEM.begin());
 	bmp_init();
 	bmp_max();
+	if (state.maxprog == 0 && state.whdr == 4) state.whdr == 3;
+	if (state.maxfold == 0 && state.whdr == 5) state.whdr == 3;
 	root = FILESYSTEM.open("/");
 	bmp_next();
 	delay(100);
@@ -205,9 +211,9 @@ void loop()
 {
 	if (state.go == true && state.maxbmp > 0)
 	{
-		if (state.whdr == 3)
+		if (state.whdr == 3 || state.whdr == 5) //files or fold
 		{
-			bmp_draw(file.name(), state.bpm);
+			bmp_draw(file.path(), state.bpm);
 			if (state.loop)
 			{
 				bmp_next();
@@ -226,7 +232,7 @@ void loop()
 				state.setbmp = 0;
 			}
 		}
-		if (state.whdr == 4)
+		if (state.whdr == 4) //prog
 		{
 			state.setbmp = 0;
 			if (FILESYSTEM.exists("/" + state.progname))

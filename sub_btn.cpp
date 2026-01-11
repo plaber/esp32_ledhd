@@ -37,6 +37,7 @@ void check_off()
 		//Serial.printf("OFF %d / %d\n", offp, 1000);
 		if (offp > 1000)
 		{
+			Serial.println("OFF");
 			digitalWrite(conf.pinp, HIGH);
 			pinMode(conf.pinp, INPUT);
 			if (conf.brgn == 4) led_brgn(2); else led_brgn(4);

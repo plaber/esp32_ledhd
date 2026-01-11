@@ -372,8 +372,8 @@ void bmp_max()
 	int st = millis();
 	File rt = FILESYSTEM.open("/");
 	File fl = rt.openNextFile();
-	int p = 0, pm = 0;
-	char fnd = 0;
+	int p = 0, pm = 0, fm = 0;
+	char fndp = 0, fndf = 0;
 	while (fl)
 	{
 		String f = fl.name();
@@ -383,7 +383,7 @@ void bmp_max()
 			if (f == state.progname)
 			{
 				state.currprog = pm;
-				fnd = 1;
+				fndp = 1;
 			}
 			if (pm < 15)
 			{
@@ -391,15 +391,50 @@ void bmp_max()
 				pm++;
 			}
 		}
+		if (fl.isDirectory())
+		{
+			if (f == state.foldname)
+			{
+				state.currfold = fm;
+				fndf = 1;
+			}
+			if (fm < 15)
+			{
+				f.toCharArray(state.foldlist[fm], 32);
+				fm++;
+			}
+
+		}
 		fl = rt.openNextFile();
 	}
-	if (fnd == 0 && pm > 0)
+	if (fndp == 0 && pm > 0)
 	{
 		state.progname = String(state.proglist[0]);
 		state.currprog = 0;
 	}
-	Serial.printf("maxbmp %d prog %d %dms\n", p, pm, millis()-st);
+	if (fndf == 0 && fm > 0)
+	{
+		state.foldname = String(state.foldlist[0]);
+		state.currfold = 0;
+	}
+	Serial.printf("maxbmp %d prog %d folds %d %dms\n", p, pm, fm, millis()-st);
+	state.maxfold = fm;
 	state.maxprog = pm;
+	state.maxbmp = p;
+}
+
+void bmp_maxf(String fld)
+{
+	int st = millis();
+	File rt = FILESYSTEM.open("/" + fld);
+	File fl = rt.openNextFile();
+	int p = 0;
+	while (fl)
+	{
+		String f = fl.name();
+		if (bmp_check(f)) p++;
+		fl = rt.openNextFile();
+	}
 	state.maxbmp = p;
 }
 
@@ -521,11 +556,12 @@ void bmp_next()
 			file = root.openNextFile();
 			if (!file)
 			{
-				root = FILESYSTEM.open("/");
+				if (state.whdr == 3) root = FILESYSTEM.open("/");
+				if (state.whdr == 5) if(state.maxfold > 0) root = FILESYSTEM.open("/" + state.foldname); else root = FILESYSTEM.open("/");
 				file = root.openNextFile();
 				state.currbmp = 0;
 			}
-			fname = file.name();
+			fname = file.path();
 		}
 		while(!bmp_check(fname));
 		state.currbmp++;
